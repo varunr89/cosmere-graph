@@ -776,6 +776,7 @@ function gemPath(r, facets) {
 // ── State ───────────────────────────────────────────────────────────────────
 
 let graph, entries;
+var similarity = {};
 let simulation;
 let focusedNode = null;
 let activeFilters = new Set(Object.keys(GEM_COLORS));
@@ -791,12 +792,14 @@ async function init() {
 
   // Load data
   const basePath = window.location.pathname.replace(/\/[^\/]*$/, '');
-  const [graphResp, entriesResp] = await Promise.all([
+  const [graphResp, entriesResp, similarityResp] = await Promise.all([
     fetch(basePath + '/data/graph.json').then(function(r) { return r.json(); }),
     fetch(basePath + '/data/entries.json').then(function(r) { return r.json(); }),
+    fetch(basePath + '/data/similarity.json').then(function(r) { return r.json(); }).catch(function() { return {}; }),
   ]);
   graph = graphResp;
   entries = entriesResp;
+  similarity = similarityResp;
 
   // Filter book nodes
   graph.nodes = graph.nodes.filter(function(n) { return n.type !== 'book'; });
@@ -1231,6 +1234,63 @@ function showPanel(nodeId, edgeData) {
   });
 
   content.appendChild(connSection);
+
+  // Similar Entities section
+  var simData = similarity[nodeId];
+  if (simData && simData.length > 0) {
+    var simDivider = document.createElement('div');
+    simDivider.className = 'panel-divider';
+    content.appendChild(simDivider);
+
+    var simSection = document.createElement('div');
+    simSection.className = 'similar-section';
+
+    var simH3 = document.createElement('h3');
+    simH3.style.color = 'var(--stormlight)';
+    simH3.style.fontSize = '0.7rem';
+    simH3.style.textTransform = 'uppercase';
+    simH3.style.letterSpacing = '0.15em';
+    simH3.style.marginBottom = '0.6rem';
+    simH3.style.opacity = '0.7';
+    simH3.textContent = 'Semantically Similar';
+    simSection.appendChild(simH3);
+
+    simData.forEach(function(s) {
+      var simNode = graph.nodes.find(function(n) { return n.id === s.id; });
+      if (!simNode || !activeFilters.has(simNode.type)) return;
+
+      var item = document.createElement('div');
+      item.className = 'connection-item';
+
+      var left = document.createElement('div');
+      left.className = 'conn-left';
+
+      var gem = document.createElement('span');
+      gem.className = 'conn-gem';
+      gem.style.background = GEM_COLORS[simNode.type];
+      left.appendChild(gem);
+
+      var nameSpan = document.createElement('span');
+      nameSpan.style.color = GEM_GLOW[simNode.type];
+      nameSpan.textContent = simNode.label;
+      left.appendChild(nameSpan);
+
+      var score = document.createElement('span');
+      score.className = 'connection-weight';
+      score.style.background = 'rgba(200, 220, 255, 0.08)';
+      score.style.color = 'var(--stormlight)';
+      score.textContent = (s.score * 100).toFixed(0) + '%';
+
+      item.appendChild(left);
+      item.appendChild(score);
+      item.addEventListener('click', function() {
+        focusNode(s.id);
+      });
+      simSection.appendChild(item);
+    });
+
+    content.appendChild(simSection);
+  }
 
   var entriesSection = document.createElement('div');
   entriesSection.id = 'entries-section';

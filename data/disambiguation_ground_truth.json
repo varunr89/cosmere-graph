@@ -1,0 +1,296 @@
+{
+  "description": "Hand-labeled WoB entries for entity disambiguation evaluation. True = entry is about the Cosmere entity. False = word is used as common English. Note: 'spook' common-word entries use inflected forms (spooked/spooks). 'marsh' has entity-only examples because the common English word (wetland) does not appear in this Q&A dataset.",
+  "entities_tested": [
+    "rock",
+    "honor",
+    "lift",
+    "ruin",
+    "stick",
+    "marsh",
+    "focus",
+    "color",
+    "spook"
+  ],
+  "labels": {
+    "4584": {
+      "entity": "rock",
+      "is_about_entity": true,
+      "snippet": "How would you pronounce Rock's full name?"
+    },
+    "3934": {
+      "entity": "rock",
+      "is_about_entity": true,
+      "snippet": "...always loved this fanart for Rock."
+    },
+    "8133": {
+      "entity": "rock",
+      "is_about_entity": true,
+      "snippet": "Who is Rock, of your friends?"
+    },
+    "10217": {
+      "entity": "rock",
+      "is_about_entity": false,
+      "snippet": "...it is meant to parody rock star/music video culture."
+    },
+    "8856": {
+      "entity": "rock",
+      "is_about_entity": false,
+      "snippet": "...to have rock-solid outlines for books four and five..."
+    },
+    "10238": {
+      "entity": "rock",
+      "is_about_entity": false,
+      "snippet": "...Utah, which has beautiful red rock formations..."
+    },
+    "776": {
+      "entity": "honor",
+      "is_about_entity": true,
+      "snippet": "Could Honor and Autonomy be considered opposites..."
+    },
+    "2729": {
+      "entity": "honor",
+      "is_about_entity": true,
+      "snippet": "If Cultivation and Honor were romantically involved..."
+    },
+    "12580": {
+      "entity": "honor",
+      "is_about_entity": true,
+      "snippet": "Does that mean Honor could be reborn?"
+    },
+    "563": {
+      "entity": "honor",
+      "is_about_entity": false,
+      "snippet": "...based upon a loved one in order to honor their memory?"
+    },
+    "1055": {
+      "entity": "honor",
+      "is_about_entity": false,
+      "snippet": "...it was more of a mark of honor to me that they..."
+    },
+    "895": {
+      "entity": "honor",
+      "is_about_entity": false,
+      "snippet": "It is my pleasure, it has been an honor."
+    },
+    "940": {
+      "entity": "lift",
+      "is_about_entity": true,
+      "snippet": "Is Lift one-of-a-kind in this regard?"
+    },
+    "2739": {
+      "entity": "lift",
+      "is_about_entity": true,
+      "snippet": "Could Lift convert food from other cosmere worlds..."
+    },
+    "15064": {
+      "entity": "lift",
+      "is_about_entity": true,
+      "snippet": "Does anyone other than Lift use 'starving' as a swear..."
+    },
+    "12305": {
+      "entity": "lift",
+      "is_about_entity": false,
+      "snippet": "...they reached the small lift with open sides."
+    },
+    "8615": {
+      "entity": "lift",
+      "is_about_entity": false,
+      "snippet": "...strong enough to lift (it's not actually strength...)"
+    },
+    "1375": {
+      "entity": "ruin",
+      "is_about_entity": true,
+      "snippet": "Can Odium influence people the same way that Ruin can?"
+    },
+    "9449": {
+      "entity": "ruin",
+      "is_about_entity": true,
+      "snippet": "Why did Ruin and Preservation decide to break..."
+    },
+    "6462": {
+      "entity": "ruin",
+      "is_about_entity": true,
+      "snippet": "Both were heavily influenced by Ruin..."
+    },
+    "1423": {
+      "entity": "ruin",
+      "is_about_entity": false,
+      "snippet": "It's going to ruin the character, whatever that is."
+    },
+    "4308": {
+      "entity": "ruin",
+      "is_about_entity": false,
+      "snippet": "...I don't wanna ruin The Emperor's Soul by writing..."
+    },
+    "5762": {
+      "entity": "ruin",
+      "is_about_entity": false,
+      "snippet": "...please don't ruin it with such depressing endings..."
+    },
+    "4480": {
+      "entity": "ruin",
+      "is_about_entity": false,
+      "snippet": "...in many ways that can ruin the book."
+    },
+    "13527": {
+      "entity": "stick",
+      "is_about_entity": true,
+      "snippet": "Is there anything that made Stick special..."
+    },
+    "2513": {
+      "entity": "stick",
+      "is_about_entity": true,
+      "snippet": "What is Stick's telos?"
+    },
+    "5298": {
+      "entity": "stick",
+      "is_about_entity": true,
+      "snippet": "Who would win in a debate between Lightsong and a stick?"
+    },
+    "1288": {
+      "entity": "stick",
+      "is_about_entity": false,
+      "snippet": "...stickers to stick on your own potatoes..."
+    },
+    "1323": {
+      "entity": "stick",
+      "is_about_entity": false,
+      "snippet": "If you drew a stick figure of a chalkling..."
+    },
+    "10007": {
+      "entity": "stick",
+      "is_about_entity": false,
+      "snippet": "...And you stick these people in these roles..."
+    },
+    "1360": {
+      "entity": "marsh",
+      "is_about_entity": true,
+      "snippet": "Where's Marsh?"
+    },
+    "5082": {
+      "entity": "marsh",
+      "is_about_entity": true,
+      "snippet": "Is Marsh happy?"
+    },
+    "15075": {
+      "entity": "marsh",
+      "is_about_entity": true,
+      "snippet": "What noble houses were Kel and Marsh born into?"
+    },
+    "741": {
+      "entity": "marsh",
+      "is_about_entity": true,
+      "snippet": "Marsh says Wax is 'doing his brother's work'"
+    },
+    "13098": {
+      "entity": "marsh",
+      "is_about_entity": true,
+      "snippet": "...the age gap between Kelsier and Marsh?"
+    },
+    "9998": {
+      "entity": "marsh",
+      "is_about_entity": true,
+      "snippet": "At the end of AoL, Marsh tells Marasi..."
+    },
+    "4249": {
+      "entity": "focus",
+      "is_about_entity": true,
+      "snippet": "...and the nature of Sel's focus."
+    },
+    "3033": {
+      "entity": "focus",
+      "is_about_entity": true,
+      "snippet": "What is the definition of a focus (in the Ars Arcanum)?"
+    },
+    "10495": {
+      "entity": "focus",
+      "is_about_entity": true,
+      "snippet": "...metals being kind of a focus of their magic."
+    },
+    "1158": {
+      "entity": "focus",
+      "is_about_entity": true,
+      "snippet": "...will the focus of Allomancy change because..."
+    },
+    "4596": {
+      "entity": "focus",
+      "is_about_entity": false,
+      "snippet": "...are going to focus each one on a different character..."
+    },
+    "1422": {
+      "entity": "focus",
+      "is_about_entity": false,
+      "snippet": "...I generally focus on one character."
+    },
+    "1397": {
+      "entity": "focus",
+      "is_about_entity": false,
+      "snippet": "My main sort of focus right now..."
+    },
+    "532": {
+      "entity": "focus",
+      "is_about_entity": false,
+      "snippet": "...character -- which is where my focus needs to be."
+    },
+    "12900": {
+      "entity": "color",
+      "is_about_entity": true,
+      "snippet": "...when the color's pulled out of something, is that..."
+    },
+    "13074": {
+      "entity": "color",
+      "is_about_entity": true,
+      "snippet": "Ruin being associated with the color black..."
+    },
+    "16761": {
+      "entity": "color",
+      "is_about_entity": true,
+      "snippet": "...relating to the color of gemstones..."
+    },
+    "7362": {
+      "entity": "color",
+      "is_about_entity": false,
+      "snippet": "Skin color is a terrible reason to judge someone."
+    },
+    "4927": {
+      "entity": "color",
+      "is_about_entity": false,
+      "snippet": "The Terris had a lot more skin color diversity..."
+    },
+    "9426": {
+      "entity": "color",
+      "is_about_entity": false,
+      "snippet": "I read the Color of Magic. Color of Magic is terrible..."
+    },
+    "387": {
+      "entity": "spook",
+      "is_about_entity": true,
+      "snippet": "...did you determine Spook's ultimate place in Mistborn..."
+    },
+    "2983": {
+      "entity": "spook",
+      "is_about_entity": true,
+      "snippet": "Was Spook still alive when they figured out..."
+    },
+    "385": {
+      "entity": "spook",
+      "is_about_entity": true,
+      "snippet": "Spook doesn't consider that a joke, he thinks it's awesome."
+    },
+    "5760": {
+      "entity": "spook",
+      "is_about_entity": false,
+      "snippet": "Something he does spooks her."
+    },
+    "1220": {
+      "entity": "spook",
+      "is_about_entity": false,
+      "snippet": "...what spooked Vin off from meeting Hoid?"
+    },
+    "3803": {
+      "entity": "spook",
+      "is_about_entity": false,
+      "snippet": "...something he does spooked her and she is too observant..."
+    }
+  }
+}

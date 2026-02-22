@@ -1,0 +1,13 @@
+# Environment
+.env
+venv/
+node_modules/
+
+# Caches
+data/embeddings_cache/
+.pytest_cache/
+__pycache__/
+test-results/
+
+# OS
+.DS_Store

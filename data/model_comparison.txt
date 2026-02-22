@@ -1,0 +1,161 @@
+======================================================================
+COSMERE EMBEDDING MODEL COMPARISON
+======================================================================
+
+Ground truth: 56 labeled entries across 9 entities
+Entities: rock, honor, lift, ruin, stick, marsh, focus, color, spook
+Entity tags (excl meta/book): 622
+Cached entry IDs: 16282
+Raw WoB entries: 16282
+Entries with explicit entity tags: 7813
+
+Available models: azure_openai, azure_cohere, gemini
+Skipped (no cache): azure_mistral, voyage
+
+Loading and precomputing per-model data...
+  azure_openai: 3072-dim, 367 entity refs
+  azure_cohere: 1024-dim, 367 entity refs
+  gemini: 3072-dim, 367 entity refs
+
+======================================================================
+TEST 1: DISAMBIGUATION ACCURACY
+======================================================================
+
+Disambiguation Accuracy (threshold=0.7)
+----------------------------------------------------------------------
+                     rock    honor     lift     ruin    stick    marsh    focus    color    spook  OVERALL
+azure_openai
+  Precision          1.00     1.00     1.00     1.00     1.00     1.00      --      1.00     1.00     1.00
+  Recall             0.67     0.33     0.67     0.67     0.67     0.17      --      1.00     0.67     0.56
+  F1                 0.80     0.50     0.80     0.80     0.80     0.29      --      1.00     0.80     0.71
+
+azure_cohere
+  Precision          1.00     1.00     1.00     1.00     1.00     1.00      --      1.00     1.00     1.00
+  Recall             0.33     0.33     0.33     0.67     0.67     0.17      --      1.00     0.67     0.48
+  F1                 0.50     0.50     0.50     0.80     0.80     0.29      --      1.00     0.80     0.65
+
+gemini
+  Precision          0.60     0.60     0.75     0.43     0.60     1.00      --      0.75     0.50     0.64
+  Recall             1.00     1.00     1.00     1.00     1.00     1.00      --      1.00     1.00     1.00
+  F1                 0.75     0.75     0.86     0.60     0.75     1.00      --      0.86     0.67     0.78
+
+
+Threshold sweep (overall F1):
+----------------------------------------------------------------------
+Threshold      azure_openai   azure_cohere         gemini
+0.4                    0.77           0.78           0.72
+0.5                    0.86           0.90           0.72
+0.6                    0.90           0.93           0.72
+0.6                    0.93           0.88           0.72
+0.7                    0.78           0.76           0.72
+0.7                    0.71           0.65           0.78
+0.8                    0.31           0.36           0.84
+0.8                    0.07           0.07           0.95
+0.8                    0.07            --            0.74
+0.9                     --             --            0.14
+
+======================================================================
+TEST 2: SIMILARITY QUALITY
+======================================================================
+
+Entity: kaladin
+  azure_openai         dalinar (0.91), adolin (0.90), shallan (0.87), knights radiant (0.84), bridge four (0.84)
+  azure_cohere         dalinar (0.92), shallan (0.89), adolin (0.88), elhokar (0.87), navani (0.87)
+  gemini               dalinar (0.95), adolin (0.95), shallan (0.94), knights radiant (0.93), roshar (0.93)
+
+Entity: hoid
+  azure_openai         worldhoppers (0.90), frost (0.85), vasher (0.85), yolish lightweaving (0.85), worldhopping (0.84)
+  azure_cohere         worldhoppers (0.87), dalinar (0.86), frost (0.86), kaladin (0.85), kelsier (0.85)
+  gemini               worldhoppers (0.95), frost (0.94), cosmere (0.94), worldhopping (0.94), scadrial (0.93)
+
+Entity: kelsier
+  azure_openai         sazed (0.88), leras (0.88), rashek (0.88), preservation (0.86), scadrial (0.85)
+  azure_cohere         sazed (0.87), kaladin (0.86), dalinar (0.85), hoid (0.85), vin (0.84)
+  gemini               leras (0.94), scadrial (0.94), rashek (0.93), sazed (0.93), preservation (0.93)
+
+Entity: allomancy
+  azure_openai         feruchemy (0.96), metallic arts (0.94), atium (0.91), god metals (0.91), compounding (0.91)
+  azure_cohere         feruchemy (0.94), metallic arts (0.94), realmatic theory (0.89), god metals (0.89), compounding (0.88)
+  gemini               feruchemy (0.98), metallic arts (0.98), investiture (0.96), realmatic theory (0.96), compounding (0.96)
+
+Entity: roshar
+  azure_openai         nalthis (0.92), scadrial (0.91), cosmere (0.91), ashyn (0.91), sel (0.90)
+  azure_cohere         scadrial (0.92), cosmere (0.90), worldhoppers (0.89), rosharan system (0.89), ashyn (0.88)
+  gemini               scadrial (0.97), cosmere (0.97), rosharan system (0.96), realmatic theory (0.96), vorinism (0.96)
+
+Entity: shallan
+  azure_openai         jasnah (0.88), dalinar (0.87), kaladin (0.87), knights radiant (0.87), adolin (0.85)
+  azure_cohere         dalinar (0.89), kaladin (0.89), jasnah (0.87), navani (0.87), adolin (0.86)
+  gemini               jasnah (0.95), knights radiant (0.94), roshar (0.94), kaladin (0.94), dalinar (0.94)
+
+Entity: honor
+  azure_openai         odium (0.89), shards (0.89), tanavast (0.89), cultivation (0.88), stormfather (0.88)
+  azure_cohere         odium (0.88), cultivation (0.87), knights radiant (0.86), shards (0.86), dalinar (0.86)
+  gemini               cultivation (0.95), shards (0.95), odium (0.94), honorblades (0.94), tanavast (0.94)
+
+Entity: vin
+  azure_openai         elend (0.92), vin's earring (0.87), zane (0.85), allrianne (0.85), tindwyl (0.85)
+  azure_cohere         elend (0.90), zane (0.86), allrianne (0.84), vin's earring (0.84), kelsier (0.84)
+  gemini               elend (0.96), vin's earring (0.96), zane (0.94), ati (0.94), allrianne (0.94)
+
+Entity: stormfather
+  azure_openai         honor (0.88), bondsmiths (0.88), knights radiant (0.86), stormlight (0.86), unmade (0.85)
+  azure_cohere         dalinar (0.86), knights radiant (0.85), honor (0.84), stormlight (0.84), bondsmiths (0.83)
+  gemini               bondsmiths (0.94), knights radiant (0.94), honor (0.94), spren (0.93), stormlight (0.93)
+
+Entity: hemalurgy
+  azure_openai         feruchemy (0.90), allomancy (0.90), identity (0.88), investiture (0.88), lerasium (0.87)
+  azure_cohere         allomancy (0.86), feruchemy (0.86), intention (0.84), metallic arts (0.83), identity (0.83)
+  gemini               feruchemy (0.95), allomancy (0.95), realmatic theory (0.95), investiture (0.94), surgebinding (0.94)
+
+======================================================================
+TEST 3: DISCOVERY POWER
+======================================================================
+
+Threshold: 0.7
+
+Discovery Power (threshold=0.7)
+----------------------------------------------------------------------
+                           azure_openai   azure_cohere         gemini
+       New implicit tags          15100           4463        4216588
+    Entries newly tagged           1688           1242           6875
+             Total nodes            622            622            622
+             Total edges           9422           1967         103623
+          Isolated nodes            218            242            109
+
+Top 10 entities by implicit tags (azure_openai):
+  cosmere sequence               +435
+  realmatic theory               +364
+  cosmere                        +312
+  investiture                    +303
+  surgebinding                   +260
+  allomancy                      +257
+  shards                         +253
+  dawnshards                     +229
+  metallic arts                  +220
+  manifestations of investiture  +216
+
+Top 10 entities by implicit tags (azure_cohere):
+  cosmere sequence               +329
+  cosmere                        +157
+  spren                          +107
+  conflux novels                 +104
+  magic system                   +89
+  nahel bond                     +88
+  investiture                    +77
+  cognitive entities             +74
+  shardblades                    +74
+  manifestations of investiture  +69
+
+Top 10 entities by implicit tags (gemini):
+  taldain                        +14824
+  nalthis                        +14796
+  scadrial                       +14707
+  sel                            +14646
+  realmatic theory               +14602
+  leras                          +14599
+  knights radiant                +14568
+  vorinism                       +14565
+  autonomy                       +14537
+  paalm                          +14466
+

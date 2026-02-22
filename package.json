@@ -1,0 +1,19 @@
+{
+  "name": "sanderson-lore-visualization",
+  "version": "1.0.0",
+  "description": "An interactive force-directed graph visualization of the Cosmere universe, built from 16,282 \"Words of Brandon\" (WoB) Q&A entries scraped from [Arcanum](https://wob.coppermind.net/).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

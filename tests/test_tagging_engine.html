@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tagging Engine Tests</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0e17;
+      color: #c8dcff;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #7eb8ff;
+    }
+    #summary {
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+    }
+    #summary.all-pass { border-left: 4px solid #4caf50; }
+    #summary.has-fail { border-left: 4px solid #f44336; }
+    #results { display: flex; flex-direction: column; gap: 0.5rem; }
+    .test-pass, .test-fail, .test-skip {
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    .test-pass {
+      background: rgba(76, 175, 80, 0.12);
+      border-left: 3px solid #4caf50;
+    }
+    .test-fail {
+      background: rgba(244, 67, 54, 0.12);
+      border-left: 3px solid #f44336;
+    }
+    .test-skip {
+      background: rgba(255, 193, 7, 0.12);
+      border-left: 3px solid #ffc107;
+      color: #ffc107;
+    }
+    .test-pass::before { content: "PASS "; font-weight: 700; color: #4caf50; }
+    .test-fail::before { content: "FAIL "; font-weight: 700; color: #f44336; }
+    .test-skip::before { content: "SKIP "; font-weight: 700; color: #ffc107; }
+    .error-detail {
+      margin-top: 0.3rem;
+      font-size: 0.85rem;
+      color: #ff8a80;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    .data-status {
+      margin-bottom: 1rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: rgba(255,255,255,0.04);
+    }
+  </style>
+</head>
+<body>
+  <h1>Tagging Engine -- Unit Tests</h1>
+  <div id="data-status" class="data-status">Loading data files...</div>
+  <div id="summary"></div>
+  <div id="results"></div>
+
+  <script src="../js/tagging-engine.js"></script>
+  <script>
+    // ---- Test harness -------------------------------------------------------
+
+    var results = [];
+    var resultsEl = document.getElementById('results');
+    var summaryEl = document.getElementById('summary');
+    var statusEl = document.getElementById('data-status');
+
+    function assert(condition, message) {
+      if (!condition) throw new Error('Assertion failed: ' + message);
+    }
+
+    function assertClose(actual, expected, tolerance, message) {
+      if (Math.abs(actual - expected) > tolerance) {
+        throw new Error(
+          message + ' -- expected ~' + expected + ', got ' + actual +
+          ' (tolerance: ' + tolerance + ')'
+        );
+      }
+    }
+
+    function recordResult(name, status, error) {
+      results.push({ name: name, status: status, error: error });
+      var el = document.createElement('div');
+      el.className = 'test-' + status;
+      el.textContent = name;
+      if (error) {
+        var detail = document.createElement('div');
+        detail.className = 'error-detail';
+        detail.textContent = error;
+        el.appendChild(detail);
+      }
+      resultsEl.appendChild(el);
+    }
+
+    function runTest(name, fn) {
+      try {
+        fn();
+        recordResult(name, 'pass');
+      } catch (e) {
+        recordResult(name, 'fail', e.message || String(e));
+      }
+    }
+
+    function skipTest(name, reason) {
+      recordResult(name, 'skip', reason);
+    }
+
+    function showSummary() {
+      var passed = results.filter(function(r) { return r.status === 'pass'; }).length;
+      var failed = results.filter(function(r) { return r.status === 'fail'; }).length;
+      var skipped = results.filter(function(r) { return r.status === 'skip'; }).length;
+      summaryEl.textContent = passed + ' passed, ' + failed + ' failed, ' + skipped + ' skipped';
+      summaryEl.className = failed > 0 ? 'has-fail' : 'all-pass';
+    }
+
+    // ---- Load data ----------------------------------------------------------
+
+    function loadJSON(url) {
+      return fetch(url).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' loading ' + url);
+        return r.json();
+      });
+    }
+
+    // Always load fixture data; optionally load real data
+    Promise.all([
+      loadJSON('fixtures/sample_scores.json'),
+      loadJSON('../data/entries.json').catch(function() { return null; }),
+      loadJSON('../data/graph.json').catch(function() { return null; }),
+      loadJSON('../data/scores.json').catch(function() { return null; })
+    ]).then(function(dataFiles) {
+      var sampleScores = dataFiles[0];
+      var entriesData = dataFiles[1];
+      var graphData = dataFiles[2];
+      var realScores = dataFiles[3];
+
+      var statusParts = ['Fixture: loaded'];
+      if (entriesData) statusParts.push('entries.json: ' + Object.keys(entriesData).length + ' entries');
+      else statusParts.push('entries.json: not found');
+      if (graphData) statusParts.push('graph.json: ' + graphData.nodes.length + ' nodes, ' + graphData.edges.length + ' edges');
+      else statusParts.push('graph.json: not found');
+      if (realScores) statusParts.push('scores.json: loaded (' + Object.keys(realScores.entities).length + ' entities)');
+      else statusParts.push('scores.json: not yet available (Track A)');
+      statusEl.textContent = statusParts.join(' | ');
+
+      // Build explicitTagsByEntry from entriesData or fixture
+      var explicitTagsByEntry = {};
+      if (entriesData) {
+        var eids = Object.keys(entriesData);
+        for (var i = 0; i < eids.length; i++) {
+          var eid = eids[i];
+          var entry = entriesData[eid];
+          if (entry.tags && entry.tags.length > 0) {
+            explicitTagsByEntry[eid] = new Set(entry.tags);
+          }
+        }
+      }
+
+      // Build fixture explicit tags (simulate some entries having tags)
+      var fixtureExplicit = {
+        '1396': new Set(['hoid']),
+        '1285': new Set(['hoid']),
+        '1472': new Set(['cognitive realm', 'hoid', 'worldhopping']),
+        '422': new Set(['kaladin', 'syl']),
+        '436': new Set(['kaladin']),
+        '945': new Set(['allomancy', 'feruchemy']),
+        '957': new Set(['allomancy']),
+        '2101': new Set(['kaladin', 'szeth']),
+        '854': new Set(['hoid']),
+        '728': new Set(['hoid', 'worldhopping'])
+      };
+
+      // ---- Tests ------------------------------------------------------------
+
+      runTests(sampleScores, realScores, fixtureExplicit, explicitTagsByEntry, graphData);
+      showSummary();
+
+    }).catch(function(err) {
+      statusEl.textContent = 'Error loading data: ' + err.message;
+      recordResult('data_loading', 'fail', err.message);
+      showSummary();
+    });
+
+    // ---- Test definitions ---------------------------------------------------
+
+    function runTests(sampleScores, realScores, fixtureExplicit, explicitTagsByEntry, graphData) {
+
+      // Test 0: resolveScore
+      runTest('resolveScore: handles plain numbers', function() {
+        assert(resolveScore(0.75) === 0.75, 'plain number should pass through');
+      });
+
+      runTest('resolveScore: takes max of array', function() {
+        assert(resolveScore([0.6, 0.8, 0.5]) === 0.8, 'should return max of array');
+      });
+
+      runTest('resolveScore: handles two-element array', function() {
+        assert(resolveScore([0.42, 0.38]) === 0.42, 'should return max of pair');
+      });
+
+      // Test 1: computeEffectiveThreshold
+      runTest('computeEffectiveThreshold: returns correct p25 value', function() {
+        var kaladin = sampleScores.entities.kaladin;
+        var threshold = computeEffectiveThreshold(kaladin, 25);
+        assert(threshold === 0.55, 'kaladin p25 should be 0.55, got ' + threshold);
+      });
+
+      runTest('computeEffectiveThreshold: returns correct p10 value', function() {
+        var hoid = sampleScores.entities.hoid;
+        var threshold = computeEffectiveThreshold(hoid, 10);
+        assert(threshold === 0.38, 'hoid p10 should be 0.38, got ' + threshold);
+      });
+
+      runTest('computeEffectiveThreshold: higher percentile = higher threshold', function() {
+        var kaladin = sampleScores.entities.kaladin;
+        var t10 = computeEffectiveThreshold(kaladin, 10);
+        var t25 = computeEffectiveThreshold(kaladin, 25);
+        var t50 = computeEffectiveThreshold(kaladin, 50);
+        assert(t10 < t25, 'p10 (' + t10 + ') should be < p25 (' + t25 + ')');
+        assert(t25 < t50, 'p25 (' + t25 + ') should be < p50 (' + t50 + ')');
+      });
+
+      runTest('computeEffectiveThreshold: throws on missing calibration', function() {
+        var threw = false;
+        try {
+          computeEffectiveThreshold({}, 25);
+        } catch (e) {
+          threw = true;
+        }
+        assert(threw, 'should throw when calibration is missing');
+      });
+
+      runTest('computeEffectiveThreshold: throws on invalid percentile', function() {
+        var threw = false;
+        try {
+          computeEffectiveThreshold(sampleScores.entities.kaladin, 99);
+        } catch (e) {
+          threw = true;
+        }
+        assert(threw, 'should throw for unsupported percentile');
+      });
+
+      // Test 2: filterBySpecificity
+      runTest('filterBySpecificity: minSpecificity=3.0 excludes hubs', function() {
+        var filtered = filterBySpecificity(sampleScores.entities, 3.0);
+        var names = Object.keys(filtered);
+        assert(names.indexOf('allomancy') === -1, 'allomancy (1.5) should be excluded');
+        assert(names.indexOf('hoid') === -1, 'hoid (2.1) should be excluded');
+        assert(names.indexOf('kaladin') !== -1, 'kaladin (4.2) should be included');
+        assert(names.indexOf('szeth') !== -1, 'szeth (5.8) should be included');
+      });
+
+      runTest('filterBySpecificity: minSpecificity=0 includes everything', function() {
+        var filtered = filterBySpecificity(sampleScores.entities, 0);
+        assert(
+          Object.keys(filtered).length === Object.keys(sampleScores.entities).length,
+          'should include all entities with minSpecificity=0'
+        );
+      });
+
+      runTest('filterBySpecificity: exact boundary included', function() {
+        var filtered = filterBySpecificity(sampleScores.entities, 4.2);
+        assert(
+          Object.keys(filtered).indexOf('kaladin') !== -1,
+          'kaladin (specificity=4.2) should be included at minSpecificity=4.2'
+        );
+      });
+
+      // Test 3: applyMarginFilter
+      runTest('applyMarginFilter: margin=0.05 keeps only top scorer', function() {
+        var candidates = [
+          { entity: 'kaladin', entryId: '100', score: 0.82 },
+          { entity: 'szeth',   entryId: '100', score: 0.73 },
+          { entity: 'hoid',    entryId: '100', score: 0.68 }
+        ];
+        var filtered = applyMarginFilter(candidates, 0.05);
+        assert(filtered.length === 1, 'expected 1 tag, got ' + filtered.length);
+        assert(filtered[0].entity === 'kaladin', 'should keep kaladin (0.82)');
+      });
+
+      runTest('applyMarginFilter: margin=0.10 keeps top two', function() {
+        var candidates = [
+          { entity: 'kaladin', entryId: '100', score: 0.82 },
+          { entity: 'szeth',   entryId: '100', score: 0.73 },
+          { entity: 'hoid',    entryId: '100', score: 0.68 }
+        ];
+        var filtered = applyMarginFilter(candidates, 0.10);
+        assert(filtered.length === 2, 'expected 2 tags, got ' + filtered.length);
+        var entities = filtered.map(function(t) { return t.entity; }).sort();
+        assert(entities[0] === 'kaladin', 'should include kaladin');
+        assert(entities[1] === 'szeth', 'should include szeth');
+      });
+
+      runTest('applyMarginFilter: margin=0 keeps all', function() {
+        var candidates = [
+          { entity: 'kaladin', entryId: '100', score: 0.82 },
+          { entity: 'szeth',   entryId: '100', score: 0.73 }
+        ];
+        var filtered = applyMarginFilter(candidates, 0);
+        assert(filtered.length === 2, 'margin=0 should keep all');
+      });
+
+      runTest('applyMarginFilter: independent per entry', function() {
+        var candidates = [
+          { entity: 'kaladin', entryId: '100', score: 0.82 },
+          { entity: 'szeth',   entryId: '100', score: 0.60 },
+          { entity: 'kaladin', entryId: '200', score: 0.75 },
+          { entity: 'szeth',   entryId: '200', score: 0.74 }
+        ];
+        var filtered = applyMarginFilter(candidates, 0.05);
+        // Entry 100: only kaladin (0.82 - 0.60 = 0.22 > 0.05)
+        // Entry 200: both (0.75 - 0.74 = 0.01 <= 0.05)
+        assert(filtered.length === 3, 'expected 3 tags, got ' + filtered.length);
+      });
+
+      // Test 4: applyMustBridgeFilter
+      runTest('applyMustBridgeFilter: removes orphaned tags', function() {
+        var implicitTags = [
+          { entity: 'kaladin', entryId: '1396', score: 0.65 }, // 1396 has explicit hoid
+          { entity: 'kaladin', entryId: '9999', score: 0.60 }  // 9999 has no explicit tags
+        ];
+        var filtered = applyMustBridgeFilter(implicitTags, fixtureExplicit);
+        assert(filtered.length === 1, 'expected 1 tag, got ' + filtered.length);
+        assert(filtered[0].entryId === '1396', 'should keep tag on entry with explicit tags');
+      });
+
+      runTest('applyMustBridgeFilter: keeps tags when entry has explicit tags', function() {
+        var implicitTags = [
+          { entity: 'szeth',   entryId: '422', score: 0.67 },
+          { entity: 'szeth',   entryId: '945', score: 0.58 },
+          { entity: 'kaladin', entryId: '945', score: 0.55 }
+        ];
+        var filtered = applyMustBridgeFilter(implicitTags, fixtureExplicit);
+        assert(filtered.length === 3, 'all entries have explicit tags, all should survive');
+      });
+
+      runTest('applyMustBridgeFilter: keeps co-occurring implicit tags', function() {
+        // Two implicit tags on the same entry with no explicit tags should survive
+        // because they bridge each other
+        var implicitTags = [
+          { entity: 'kaladin', entryId: '8888', score: 0.70 },
+          { entity: 'szeth',   entryId: '8888', score: 0.65 }
+        ];
+        var filtered = applyMustBridgeFilter(implicitTags, {}); // no explicit tags
+        assert(filtered.length === 2, 'co-occurring implicit tags should bridge each other');
+      });
+
+      runTest('applyMustBridgeFilter: single orphan implicit tag removed', function() {
+        var implicitTags = [
+          { entity: 'kaladin', entryId: '8888', score: 0.70 }
+        ];
+        var filtered = applyMustBridgeFilter(implicitTags, {}); // no explicit tags
+        assert(filtered.length === 0, 'single implicit tag with no bridge should be removed');
+      });
+
+      // Test 5: rebuildEdges
+      runTest('rebuildEdges: creates edges from co-occurring tags', function() {
+        var explicit = {
+          '100': new Set(['kaladin', 'szeth']),
+          '200': new Set(['kaladin', 'szeth'])
+        };
+        var implicit = [];
+        var result = rebuildEdges(explicit, implicit, 2);
+        assert(result.edges.length === 1, 'expected 1 edge, got ' + result.edges.length);
+        assert(result.edges[0].weight === 2, 'edge weight should be 2');
+        assert(result.edges[0].type === 'explicit', 'type should be explicit');
+      });
+
+      runTest('rebuildEdges: implicit tags create implicit edges', function() {
+        var explicit = {
+          '100': new Set(['kaladin']),
+          '200': new Set(['kaladin'])
+        };
+        var implicit = [
+          { entity: 'szeth', entryId: '100', score: 0.7 },
+          { entity: 'szeth', entryId: '200', score: 0.65 }
+        ];
+        var result = rebuildEdges(explicit, implicit, 1);
+        // kaladin-szeth edge: both entries have kaladin (explicit) + szeth (implicit)
+        var ksEdge = result.edges.find(function(e) {
+          return (e.source === 'kaladin' && e.target === 'szeth') ||
+                 (e.source === 'szeth' && e.target === 'kaladin');
+        });
+        assert(ksEdge, 'should have kaladin-szeth edge');
+        assert(ksEdge.weight === 2, 'edge weight should be 2');
+        assert(
+          ksEdge.type === 'mixed' || ksEdge.type === 'implicit',
+          'edge type should reflect implicit contribution, got ' + ksEdge.type
+        );
+      });
+
+      runTest('rebuildEdges: respects minEdgeWeight', function() {
+        var explicit = {
+          '100': new Set(['kaladin', 'szeth'])
+        };
+        var result = rebuildEdges(explicit, [], 2);
+        assert(result.edges.length === 0, 'single co-occurrence should be filtered at minEdgeWeight=2');
+      });
+
+      runTest('rebuildEdges: stats are populated', function() {
+        var explicit = {
+          '100': new Set(['kaladin', 'szeth']),
+          '200': new Set(['kaladin', 'szeth', 'hoid'])
+        };
+        var implicit = [
+          { entity: 'allomancy', entryId: '100', score: 0.6 }
+        ];
+        var result = rebuildEdges(explicit, implicit, 1);
+        assert(result.stats.totalImplicitTags === 1, 'totalImplicitTags should be 1');
+        assert(result.stats.totalEdges > 0, 'should have edges');
+        assert(typeof result.stats.implicitEdges === 'number', 'implicitEdges should be a number');
+        assert(typeof result.stats.mixedEdges === 'number', 'mixedEdges should be a number');
+        assert(typeof result.stats.explicitEdges === 'number', 'explicitEdges should be a number');
+      });
+
+      runTest('rebuildEdges: no duplicate edges from implicit overlap with explicit', function() {
+        var explicit = {
+          '100': new Set(['kaladin', 'szeth'])
+        };
+        // Implicit tag for kaladin on entry 100 -- kaladin is already explicit
+        var implicit = [
+          { entity: 'kaladin', entryId: '100', score: 0.8 }
+        ];
+        var result = rebuildEdges(explicit, implicit, 1);
+        // Should still just have one edge: kaladin-szeth, weight 1
+        var ksEdges = result.edges.filter(function(e) {
+          return (e.source === 'kaladin' || e.target === 'kaladin') &&
+                 (e.source === 'szeth' || e.target === 'szeth');
+        });
+        assert(ksEdges.length === 1, 'should not create duplicate edges');
+      });
+
+      // Test 6: computeImplicitTags full pipeline
+      runTest('computeImplicitTags_full: produces tags with default settings', function() {
+        var settings = { calibrationPercentile: 25, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var result = computeImplicitTags(sampleScores, fixtureExplicit, {}, settings);
+        assert(result.implicitTags.length > 0, 'should produce some implicit tags');
+        assert(result.stats.totalTags === result.implicitTags.length, 'stats.totalTags should match');
+        // All scores should be within valid range [0, 1]
+        for (var i = 0; i < result.implicitTags.length; i++) {
+          var t = result.implicitTags[i];
+          assert(t.score >= 0 && t.score <= 1, 'score should be in [0,1], got ' + t.score);
+          assert(typeof t.entity === 'string', 'entity should be a string');
+          assert(typeof t.entryId === 'string', 'entryId should be a string');
+        }
+      });
+
+      runTest('computeImplicitTags_full: edges have type field', function() {
+        var settings = { calibrationPercentile: 50, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var result = computeImplicitTags(sampleScores, fixtureExplicit, {}, settings);
+        for (var i = 0; i < result.edges.length; i++) {
+          var e = result.edges[i];
+          assert(
+            e.type === 'explicit' || e.type === 'implicit' || e.type === 'mixed',
+            'edge type should be explicit/implicit/mixed, got ' + e.type
+          );
+          assert(typeof e.source === 'string', 'edge source should be a string');
+          assert(typeof e.target === 'string', 'edge target should be a string');
+          assert(typeof e.weight === 'number' && e.weight > 0, 'edge weight should be positive');
+        }
+      });
+
+      runTest('computeImplicitTags_full: excludes already-explicit tags', function() {
+        var settings = { calibrationPercentile: 50, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var result = computeImplicitTags(sampleScores, fixtureExplicit, {}, settings);
+        // hoid is explicit on entries 1396, 1285, 1472, 854, 728
+        // None of those should appear as implicit hoid tags
+        var hoidImplicit = result.implicitTags.filter(function(t) {
+          return t.entity === 'hoid';
+        });
+        for (var i = 0; i < hoidImplicit.length; i++) {
+          var explTags = fixtureExplicit[hoidImplicit[i].entryId];
+          if (explTags) {
+            assert(
+              !explTags.has('hoid'),
+              'entry ' + hoidImplicit[i].entryId + ' should not get implicit hoid (already explicit)'
+            );
+          }
+        }
+      });
+
+      runTest('computeImplicitTags_full: stats has expected fields', function() {
+        var settings = { calibrationPercentile: 25 };
+        var result = computeImplicitTags(sampleScores, fixtureExplicit, {}, settings);
+        assert(typeof result.stats.totalTags === 'number', 'stats.totalTags');
+        assert(typeof result.stats.totalEdges === 'number', 'stats.totalEdges');
+        assert(typeof result.stats.implicitEdges === 'number', 'stats.implicitEdges');
+        assert(typeof result.stats.mixedEdges === 'number', 'stats.mixedEdges');
+        assert(typeof result.stats.explicitEdges === 'number', 'stats.explicitEdges');
+        assert(typeof result.stats.rescuedNodes === 'number', 'stats.rescuedNodes');
+        assert(typeof result.stats.connectedEntities === 'number', 'stats.connectedEntities');
+        assert(typeof result.stats.entitiesConsidered === 'number', 'stats.entitiesConsidered');
+      });
+
+      // Test 7: threshold monotonicity
+      // p10 = lowest threshold (most permissive) -> most tags
+      // p50 = highest threshold (most strict) -> fewest tags
+      runTest('threshold_monotonicity: higher percentile produces fewer tags', function() {
+        var settingsLoose = { calibrationPercentile: 10, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var settingsStrict = { calibrationPercentile: 50, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var resultLoose = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsLoose);
+        var resultStrict = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsStrict);
+        assert(
+          resultLoose.implicitTags.length > resultStrict.implicitTags.length,
+          'p10 (lower threshold) should produce more tags (' + resultLoose.implicitTags.length +
+          ') than p50 (higher threshold, ' + resultStrict.implicitTags.length + ')'
+        );
+      });
+
+      runTest('threshold_monotonicity: monotonic across all percentiles', function() {
+        var percentiles = [10, 15, 20, 25, 30, 35, 40, 45, 50];
+        var counts = [];
+        for (var i = 0; i < percentiles.length; i++) {
+          var settings = { calibrationPercentile: percentiles[i], minSpecificity: 0 };
+          var result = computeImplicitTags(sampleScores, fixtureExplicit, {}, settings);
+          counts.push(result.implicitTags.length);
+        }
+        // Each count should be <= the previous (higher percentile = higher threshold = fewer tags)
+        for (var i = 1; i < counts.length; i++) {
+          assert(
+            counts[i] <= counts[i - 1],
+            'p' + percentiles[i] + ' (' + counts[i] + ' tags) should be <= p' +
+            percentiles[i - 1] + ' (' + counts[i - 1] + ' tags)'
+          );
+        }
+      });
+
+      // Test 8: specificity filters hubs
+      runTest('specificity_filters_hubs: minSpecificity reduces tag count', function() {
+        var settingsAll = { calibrationPercentile: 25, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var settingsFiltered = { calibrationPercentile: 25, minSpecificity: 3.0, confidenceMargin: 0, mustBridge: false };
+        var resultAll = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsAll);
+        var resultFiltered = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsFiltered);
+        assert(
+          resultFiltered.implicitTags.length < resultAll.implicitTags.length,
+          'filtering hubs (minSpecificity=3.0) should produce fewer tags: ' +
+          resultFiltered.implicitTags.length + ' vs ' + resultAll.implicitTags.length
+        );
+      });
+
+      runTest('specificity_filters_hubs: hub entities are absent from filtered results', function() {
+        var settings = { calibrationPercentile: 25, minSpecificity: 3.0 };
+        var result = computeImplicitTags(sampleScores, fixtureExplicit, {}, settings);
+        var entities = {};
+        for (var i = 0; i < result.implicitTags.length; i++) {
+          entities[result.implicitTags[i].entity] = true;
+        }
+        assert(!entities['allomancy'], 'allomancy (specificity 1.5) should not appear');
+        assert(!entities['hoid'], 'hoid (specificity 2.1) should not appear');
+      });
+
+      // Test 9: mustBridge integration
+      runTest('mustBridge: reduces tags when enabled', function() {
+        var settingsOff = { calibrationPercentile: 25, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var settingsOn = { calibrationPercentile: 25, minSpecificity: 0, confidenceMargin: 0, mustBridge: true };
+        var resultOff = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsOff);
+        var resultOn = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsOn);
+        assert(
+          resultOn.implicitTags.length <= resultOff.implicitTags.length,
+          'mustBridge=true should produce same or fewer tags: ' +
+          resultOn.implicitTags.length + ' vs ' + resultOff.implicitTags.length
+        );
+      });
+
+      // Test 10: margin filter integration
+      runTest('confidenceMargin: reduces tags when positive', function() {
+        var settingsNoMargin = { calibrationPercentile: 50, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var settingsWithMargin = { calibrationPercentile: 50, minSpecificity: 0, confidenceMargin: 0.10, mustBridge: false };
+        var resultNo = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsNoMargin);
+        var resultWith = computeImplicitTags(sampleScores, fixtureExplicit, {}, settingsWithMargin);
+        assert(
+          resultWith.implicitTags.length <= resultNo.implicitTags.length,
+          'margin=0.10 should produce same or fewer tags: ' +
+          resultWith.implicitTags.length + ' vs ' + resultNo.implicitTags.length
+        );
+      });
+
+      // Test 11: rescued nodes stat
+      runTest('rescuedNodes: counts entities not in baseline', function() {
+        var baseline = { 'kaladin': true, 'hoid': true }; // only these two in baseline
+        var settings = { calibrationPercentile: 50, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+        var result = computeImplicitTags(sampleScores, fixtureExplicit, baseline, settings);
+        // Any entities connected via edges that are NOT in baseline count as rescued
+        if (result.stats.connectedEntities > 2) {
+          assert(
+            result.stats.rescuedNodes > 0,
+            'should have rescued nodes when new entities are connected'
+          );
+        }
+      });
+
+      // ---- Tests with real scores.json (if available) -----------------------
+
+      if (realScores) {
+        runTest('real_scores: computeImplicitTags runs without error', function() {
+          var settings = { calibrationPercentile: 25, minSpecificity: 0, confidenceMargin: 0, mustBridge: false };
+          var result = computeImplicitTags(realScores, explicitTagsByEntry, {}, settings);
+          assert(result.implicitTags.length > 0, 'should produce implicit tags from real data');
+          assert(result.edges.length > 0, 'should produce edges from real data');
+        });
+
+        runTest('real_scores: threshold monotonicity on real data', function() {
+          var countP10 = computeImplicitTags(
+            realScores, explicitTagsByEntry, {},
+            { calibrationPercentile: 10, minSpecificity: 0 }
+          ).implicitTags.length;
+          var countP50 = computeImplicitTags(
+            realScores, explicitTagsByEntry, {},
+            { calibrationPercentile: 50, minSpecificity: 0 }
+          ).implicitTags.length;
+          assert(
+            countP10 >= countP50,
+            'real data: p10 (' + countP10 + ', lower threshold) should produce >= p50 (' + countP50 + ', higher threshold) tags'
+          );
+        });
+      } else {
+        skipTest('real_scores: computeImplicitTags runs without error', 'Waiting for scores.json (Track A)');
+        skipTest('real_scores: threshold monotonicity on real data', 'Waiting for scores.json (Track A)');
+      }
+    }
+  </script>
+</body>
+</html>

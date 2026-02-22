@@ -1,58 +1,8 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
-const http = require('http');
-const fs = require('fs');
-
-// Simple static file server for serving test files (fetch() requires HTTP, not file://)
-function createServer(rootDir) {
-  const mimeTypes = {
-    '.html': 'text/html',
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-    '.css': 'text/css'
-  };
-
-  const server = http.createServer((req, res) => {
-    const filePath = path.join(rootDir, decodeURIComponent(req.url));
-    const ext = path.extname(filePath);
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
-
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404);
-        res.end('Not found: ' + req.url);
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(data);
-    });
-  });
-
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
-      const port = server.address().port;
-      resolve({ server, port, url: 'http://127.0.0.1:' + port });
-    });
-  });
-}
-
-let serverInfo;
-
-test.beforeAll(async () => {
-  // Serve the entire sanderson-lore-visualization directory
-  const projectRoot = path.resolve(__dirname, '..');
-  serverInfo = await createServer(projectRoot);
-});
-
-test.afterAll(async () => {
-  if (serverInfo && serverInfo.server) {
-    serverInfo.server.close();
-  }
-});
 
 test('tagging engine tests all pass', async ({ page }) => {
   test.setTimeout(90000); // entries.json is ~6 MB, loading can be slow
-  await page.goto(serverInfo.url + '/tests/test_tagging_engine.html');
+  await page.goto('/tests/test_tagging_engine.html');
 
   // Wait for the summary to be populated (indicates all tests have run).
   // entries.json is large (~6 MB) so allow generous timeout.
@@ -82,7 +32,7 @@ test('tagging engine tests all pass', async ({ page }) => {
 });
 
 test('tagging engine functions are accessible in page', async ({ page }) => {
-  await page.goto(serverInfo.url + '/tests/test_tagging_engine.html');
+  await page.goto('/tests/test_tagging_engine.html');
 
   // Wait for the page to load scripts
   await page.waitForFunction(() => typeof window.computeEffectiveThreshold === 'function', { timeout: 10000 });

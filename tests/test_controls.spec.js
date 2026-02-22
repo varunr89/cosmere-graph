@@ -1,68 +1,11 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
-const http = require('http');
-const fs = require('fs');
-
-// Simple static file server (same pattern as test_tagging_engine.spec.js)
-function createServer(rootDir) {
-  const mimeTypes = {
-    '.html': 'text/html',
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-    '.css': 'text/css'
-  };
-
-  const server = http.createServer((req, res) => {
-    const filePath = path.join(rootDir, decodeURIComponent(req.url));
-    const ext = path.extname(filePath);
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
-
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404);
-        res.end('Not found: ' + req.url);
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(data);
-    });
-  });
-
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
-      const port = server.address().port;
-      resolve({ server, port, url: 'http://127.0.0.1:' + port });
-    });
-  });
-}
-
-let serverInfo;
-
-test.beforeAll(async () => {
-  const projectRoot = path.resolve(__dirname, '..');
-  serverInfo = await createServer(projectRoot);
-});
-
-test.afterAll(async () => {
-  if (serverInfo && serverInfo.server) {
-    serverInfo.server.close();
-  }
-});
-
-// Helper: wait for the page to finish loading (past the loading screen)
-async function waitForAppReady(page) {
-  // The loading screen fades and graph-container becomes visible
-  await page.waitForFunction(() => {
-    var gc = document.getElementById('graph-container');
-    return gc && gc.style.opacity === '1';
-  }, { timeout: 30000 });
-}
+const { waitForAppReady } = require('./helpers');
 
 // ---- Test: Top bar renders with Apply button and stats display ----
 
 test('embedding controls bar renders with Apply button and stats', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // The top bar should be visible
@@ -83,7 +26,7 @@ test('embedding controls bar renders with Apply button and stats', async ({ page
 
 test('tuning panel expands and collapses', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // Panel should be collapsed initially
@@ -107,7 +50,7 @@ test('tuning panel expands and collapses', async ({ page }) => {
 
 test('all sliders exist with correct default values', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // Expand the tuning panel first
@@ -156,7 +99,7 @@ test('all sliders exist with correct default values', async ({ page }) => {
 
 test('slider value labels show current values', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // Expand tuning panel
@@ -173,7 +116,7 @@ test('slider value labels show current values', async ({ page }) => {
 
 test('slider value labels update when slider value changes', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   await page.locator('#tuning-toggle-btn').click();
@@ -191,7 +134,7 @@ test('slider value labels update when slider value changes', async ({ page }) =>
 
 test('Apply button triggers recomputation and updates stats', async ({ page }) => {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // Stats should show placeholder text initially (before first Apply)
@@ -218,7 +161,7 @@ test('Apply button triggers recomputation and updates stats', async ({ page }) =
 
 test('Apply button shows loading state during computation', async ({ page }) => {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // Click Apply and immediately check button state

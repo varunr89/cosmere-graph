@@ -1,75 +1,11 @@
 const { test, expect } = require('@playwright/test');
-const path = require('path');
-const http = require('http');
-const fs = require('fs');
-
-// Simple static file server (same pattern as other test files)
-function createServer(rootDir) {
-  var mimeTypes = {
-    '.html': 'text/html',
-    '.js': 'application/javascript',
-    '.json': 'application/json',
-    '.css': 'text/css'
-  };
-
-  var server = http.createServer(function(req, res) {
-    var filePath = path.join(rootDir, decodeURIComponent(req.url));
-    var ext = path.extname(filePath);
-    var contentType = mimeTypes[ext] || 'application/octet-stream';
-
-    fs.readFile(filePath, function(err, data) {
-      if (err) {
-        res.writeHead(404);
-        res.end('Not found: ' + req.url);
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(data);
-    });
-  });
-
-  return new Promise(function(resolve) {
-    server.listen(0, '127.0.0.1', function() {
-      var port = server.address().port;
-      resolve({ server: server, port: port, url: 'http://127.0.0.1:' + port });
-    });
-  });
-}
-
-var serverInfo;
-
-test.beforeAll(async function() {
-  var projectRoot = path.resolve(__dirname, '..');
-  serverInfo = await createServer(projectRoot);
-});
-
-test.afterAll(async function() {
-  if (serverInfo && serverInfo.server) {
-    serverInfo.server.close();
-  }
-});
-
-// Helper: wait for the page to finish loading (past the loading screen)
-async function waitForAppReady(page) {
-  await page.waitForFunction(function() {
-    var gc = document.getElementById('graph-container');
-    return gc && gc.style.opacity === '1';
-  }, { timeout: 30000 });
-}
-
-// Helper: click Apply and wait for computation to finish
-async function clickApplyAndWait(page) {
-  await page.locator('#apply-embeddings-btn').click();
-  await page.waitForFunction(function() {
-    return window._lastImplicitResult && window._lastImplicitResult.edges;
-  }, { timeout: 90000 });
-}
+const { waitForAppReady, clickApplyAndWait } = require('./helpers');
 
 // ---- Test 1: After clicking Apply, implicit edges appear in the SVG (dashed, amber) ----
 
 test('implicit edges render as dashed amber lines after Apply', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
 
   // Before Apply, there should be no implicit edge lines
@@ -99,7 +35,7 @@ test('implicit edges render as dashed amber lines after Apply', async function({
 
 test('explicit edges remain solid after Apply', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 
@@ -115,7 +51,7 @@ test('explicit edges remain solid after Apply', async function({ page }) {
 
 test('edge layer radio toggles between Explicit, Both, and Implicit views', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 
@@ -169,7 +105,7 @@ test('edge layer radio toggles between Explicit, Both, and Implicit views', asyn
 
 test('review panel opens and closes', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 
@@ -203,7 +139,7 @@ test('review panel opens and closes', async function({ page }) {
 
 test('review panel lists implicit tags with scores', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 
@@ -234,7 +170,7 @@ test('review panel lists implicit tags with scores', async function({ page }) {
 
 test('clicking confirm/reject updates review row status', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 
@@ -281,7 +217,7 @@ test('clicking confirm/reject updates review row status', async function({ page 
 
 test('save reviews generates JSON download', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 
@@ -300,6 +236,7 @@ test('save reviews generates JSON download', async function({ page }) {
 
   // Read the downloaded content and verify structure
   var filePath = await download.path();
+  var fs = require('fs');
   var content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
   expect(content.timestamp).toBeTruthy();
@@ -323,7 +260,7 @@ test('save reviews generates JSON download', async function({ page }) {
 
 test('stats display shows tag and edge counts after Apply', async function({ page }) {
   test.setTimeout(120000);
-  await page.goto(serverInfo.url + '/index.html');
+  await page.goto('/index.html');
   await waitForAppReady(page);
   await clickApplyAndWait(page);
 

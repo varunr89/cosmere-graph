@@ -26,21 +26,18 @@ Usage:
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
 from sklearn.cluster import KMeans
 
-# -- Paths -------------------------------------------------------------------
-
-project_root = Path(__file__).parent.parent
-data_dir = project_root / "data"
-cache_dir = data_dir / "embeddings_cache"
-wob_path = project_root.parent / "words-of-brandon" / "wob_entries.json"
+sys.path.insert(0, str(Path(__file__).parent))
+from common.paths import DATA_DIR as data_dir, WOB_PATH as wob_path
+from common.models import ALL_MODELS, EXCLUDE_TYPES
+from common.embeddings import load_embeddings, normalize_embeddings
 
 # -- CLI ---------------------------------------------------------------------
-
-ALL_MODELS = ["azure_openai", "azure_cohere", "azure_mistral", "gemini", "voyage"]
 
 parser = argparse.ArgumentParser(
     description="Export per-entity similarity scores for the interactive frontend",
@@ -75,27 +72,7 @@ MIN_ENTRIES_FOR_REF = 3
 
 # -- 1. Load cached embeddings and entry IDs ---------------------------------
 
-npy_path = cache_dir / f"{args.model}.npy"
-ids_path = cache_dir / "entry_ids.json"
-
-if not npy_path.exists():
-    raise FileNotFoundError(
-        f"Embeddings not found at {npy_path}. "
-        f"Run 04_embed_entries.py --models {args.model} first."
-    )
-if not ids_path.exists():
-    raise FileNotFoundError(
-        f"Entry IDs not found at {ids_path}. "
-        f"Run 04_embed_entries.py first."
-    )
-
-embeddings = np.load(npy_path)
-with open(ids_path) as f:
-    entry_ids = json.load(f)
-
-assert embeddings.shape[0] == len(entry_ids), (
-    f"Shape mismatch: embeddings {embeddings.shape[0]} vs entry_ids {len(entry_ids)}"
-)
+embeddings, entry_ids = load_embeddings(args.model)
 
 eid_to_idx = {eid: idx for idx, eid in enumerate(entry_ids)}
 total_entries = len(entry_ids)
@@ -114,7 +91,6 @@ with open(data_dir / "tag_classifications.json") as f:
     tag_class = json.load(f)
 
 # Entity tags: everything except meta and book
-EXCLUDE_TYPES = {"meta", "book"}
 entity_tags = {t for t, info in tag_class.items() if info["type"] not in EXCLUDE_TYPES}
 
 print(f"\nTotal raw entries: {len(raw_entries)}")
@@ -132,14 +108,7 @@ print(f"Entries with explicit entity tags: {len(entry_explicit_tags)}")
 
 # -- 3. L2-normalize all entry embeddings -----------------------------------
 
-norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-zero_mask = (norms.squeeze() == 0)
-zero_count = int(zero_mask.sum())
-if zero_count:
-    print(f"  WARNING: {zero_count} entries have zero-norm embeddings")
-norms = np.where(norms == 0, 1.0, norms)
-entries_norm = (embeddings / norms).astype(np.float32)
-entries_norm[zero_mask] = 0.0
+entries_norm = normalize_embeddings(embeddings).astype(np.float32)
 
 # -- 4. Process each entity -------------------------------------------------
 

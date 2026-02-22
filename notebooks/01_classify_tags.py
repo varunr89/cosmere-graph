@@ -12,12 +12,15 @@ Categories:
 """
 
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common.paths import WOB_PATH, TAG_CLASS_PATH
+
 # Load WoB data
-wob_path = Path(__file__).parent.parent.parent / "words-of-brandon" / "wob_entries.json"
-with open(wob_path) as f:
+with open(WOB_PATH) as f:
     entries = json.load(f)
 
 # Get all tags with counts
@@ -456,7 +459,7 @@ print(f"\nWoB entries with at least one entity tag: {entries_with_entities}/{len
 
 # ── Save ────────────────────────────────────────────────────────────────────
 
-output_path = Path(__file__).parent.parent / "data" / "tag_classifications.json"
+output_path = TAG_CLASS_PATH
 output_path.parent.mkdir(parents=True, exist_ok=True)
 
 # Save as {tag: {type, count}} for easy consumption

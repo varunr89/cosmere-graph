@@ -16,29 +16,24 @@ Usage:
 import argparse
 import json
 import os
-import re
 import time
-from html import unescape
+import sys
 from pathlib import Path
 
 import numpy as np
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common.paths import PROJECT_ROOT, DATA_DIR as data_dir, CACHE_DIR as cache_dir, WOB_PATH as wob_path
+from common.models import ALL_MODELS
+from common.html_utils import strip_html
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-project_root = Path(__file__).parent.parent
-dotenv_path = project_root / ".env"
-load_dotenv(dotenv_path)
-
-data_dir = project_root / "data"
-cache_dir = data_dir / "embeddings_cache"
+load_dotenv(PROJECT_ROOT / ".env")
 cache_dir.mkdir(parents=True, exist_ok=True)
 
-wob_path = project_root.parent / "words-of-brandon" / "wob_entries.json"
-
 # ── CLI ───────────────────────────────────────────────────────────────────────
-
-ALL_MODELS = ["azure_openai", "azure_cohere", "azure_mistral", "gemini", "voyage"]
 
 parser = argparse.ArgumentParser(description="Embed WoB entries with multiple models")
 parser.add_argument(
@@ -56,14 +51,6 @@ for m in requested_models:
 
 
 # ── Text preparation ─────────────────────────────────────────────────────────
-
-def strip_html(text: str) -> str:
-    """Remove HTML tags and decode entities."""
-    text = re.sub(r"<[^>]+>", "", text)
-    # Decode standard HTML entities
-    text = unescape(text)
-    return text.strip()
-
 
 def prepare_entry_text(entry: dict) -> str:
     """Concatenate all lines and note into a single embedding-ready string."""

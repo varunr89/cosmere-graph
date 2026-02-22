@@ -26,22 +26,20 @@ Usage:
 
 import argparse
 import json
-import re
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
 
-# -- Paths -------------------------------------------------------------------
-
-project_root = Path(__file__).parent.parent
-data_dir = project_root / "data"
-cache_dir = data_dir / "embeddings_cache"
-wob_path = project_root.parent / "words-of-brandon" / "wob_entries.json"
+sys.path.insert(0, str(Path(__file__).parent))
+from common.paths import DATA_DIR as data_dir, WOB_PATH as wob_path
+from common.models import ALL_MODELS, EXCLUDE_TYPES, MIN_EDGE_WEIGHT
+from common.html_utils import strip_html
+from common.embeddings import load_embeddings, normalize_embeddings, compute_entity_refs
+from common.graph_builder import build_cooccurrence_edges, build_nodes, build_edges
 
 # -- CLI ---------------------------------------------------------------------
-
-ALL_MODELS = ["azure_openai", "azure_cohere", "azure_mistral", "gemini", "voyage"]
 
 parser = argparse.ArgumentParser(
     description="Build Cosmere knowledge graph with embedding-based tagging",
@@ -72,39 +70,9 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-# -- Helpers -----------------------------------------------------------------
-
-def strip_html(text):
-    """Remove HTML tags and decode common entities."""
-    text = re.sub(r"<[^>]+>", "", text)
-    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
-    text = text.replace("&quot;", '"').replace("&#39;", "'")
-    return text.strip()
-
-
 # -- 1. Load cached embeddings and entry IDs ---------------------------------
 
-npy_path = cache_dir / f"{args.model}.npy"
-ids_path = cache_dir / "entry_ids.json"
-
-if not npy_path.exists():
-    raise FileNotFoundError(
-        f"Embeddings not found at {npy_path}. "
-        f"Run 04_embed_entries.py --models {args.model} first."
-    )
-if not ids_path.exists():
-    raise FileNotFoundError(
-        f"Entry IDs not found at {ids_path}. "
-        f"Run 04_embed_entries.py first."
-    )
-
-embeddings = np.load(npy_path)
-with open(ids_path) as f:
-    entry_ids = json.load(f)
-
-assert embeddings.shape[0] == len(entry_ids), (
-    f"Shape mismatch: embeddings {embeddings.shape[0]} vs entry_ids {len(entry_ids)}"
-)
+embeddings, entry_ids = load_embeddings(args.model)
 
 eid_to_idx = {eid: idx for idx, eid in enumerate(entry_ids)}
 
@@ -122,7 +90,6 @@ with open(data_dir / "tag_classifications.json") as f:
     tag_class = json.load(f)
 
 # Entity tags: everything except meta and book
-EXCLUDE_TYPES = {"meta", "book"}
 entity_tags = {t for t, info in tag_class.items() if info["type"] not in EXCLUDE_TYPES}
 
 print(f"\nTotal raw entries: {len(raw_entries)}")
@@ -145,35 +112,17 @@ print(f"Entries with explicit entity tags: {len(entry_explicit_tags)}")
 
 MIN_ENTRIES_FOR_REF = 5
 
-entity_ids = []  # parallel to entity_refs rows
-entity_ref_list = []
+refs_dict = compute_entity_refs(embeddings, entity_tags, entry_explicit_tags, eid_to_idx,
+                                min_entries=MIN_ENTRIES_FOR_REF)
+entity_ids = list(refs_dict.keys())
+entity_refs = np.array(list(refs_dict.values()), dtype=np.float32)
+
 skipped_entities = []
-
 for tag in sorted(entity_tags):
-    # Find all entries that have this tag explicitly
-    tag_eids = [
-        eid for eid, tags in entry_explicit_tags.items()
-        if tag in tags and eid in eid_to_idx
-    ]
-
+    tag_eids = [eid for eid, tags in entry_explicit_tags.items()
+                if tag in tags and eid in eid_to_idx]
     if len(tag_eids) < MIN_ENTRIES_FOR_REF:
         skipped_entities.append((tag, len(tag_eids)))
-        continue
-
-    # Gather embedding rows
-    indices = [eid_to_idx[eid] for eid in tag_eids]
-    tag_embeddings = embeddings[indices]
-
-    # Average and L2-normalize
-    ref = tag_embeddings.mean(axis=0)
-    norm = np.linalg.norm(ref)
-    if norm > 0:
-        ref = ref / norm
-
-    entity_ids.append(tag)
-    entity_ref_list.append(ref)
-
-entity_refs = np.array(entity_ref_list, dtype=np.float32)
 
 print(f"\nEntity reference embeddings: {entity_refs.shape}")
 print(f"Entities with refs: {len(entity_ids)}")
@@ -187,8 +136,6 @@ if skipped_entities:
         print(f"    {tag}: {count} entries")
 
 # -- 4. Find baseline isolated nodes ----------------------------------------
-
-MIN_EDGE_WEIGHT = 2
 
 # Build baseline co-occurrence graph from explicit tags only to find isolated nodes
 baseline_edge_entries = defaultdict(list)
@@ -225,14 +172,7 @@ else:
 # -- 5. Embedding-based implicit tagging (targeted) -------------------------
 
 # L2-normalize all entry embeddings
-norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-zero_mask = (norms.squeeze() == 0)
-zero_count = int(zero_mask.sum())
-if zero_count:
-    print(f"  WARNING: {zero_count} entries have zero-norm embeddings (will be excluded)")
-norms = np.where(norms == 0, 1.0, norms)
-entries_norm = embeddings / norms
-entries_norm[zero_mask] = 0.0
+entries_norm = normalize_embeddings(embeddings)
 
 # Only compute similarity for target entity columns (not all 367)
 target_cols = [i for i, eid in enumerate(entity_ids) if eid in target_entities]
@@ -284,45 +224,14 @@ if implicit_tag_counts:
 
 # -- 6. Build co-occurrence graph -------------------------------------------
 
-edge_entries = defaultdict(list)  # (tag_a, tag_b) -> [entry_ids]
-node_entries = defaultdict(list)  # tag -> [entry_ids]
-
-for eid, tags in entry_all_tags.items():
-    tags_sorted = sorted(tags)
-    for t in tags_sorted:
-        node_entries[t].append(eid)
-    for i in range(len(tags_sorted)):
-        for j in range(i + 1, len(tags_sorted)):
-            pair = (tags_sorted[i], tags_sorted[j])
-            edge_entries[pair].append(eid)
-
-# Filter edges: weight >= 2
-filtered_edges = {
-    pair: eids for pair, eids in edge_entries.items()
-    if len(eids) >= MIN_EDGE_WEIGHT
-}
+cooc_entries = [{"id": eid, "tags": list(tags)} for eid, tags in entry_all_tags.items()]
+node_entries, filtered_edges = build_cooccurrence_edges(cooc_entries, entity_tags)
 
 # Build nodes list
-nodes = []
-for tag in sorted(node_entries.keys()):
-    info = tag_class.get(tag, {"type": "concept", "count": 0})
-    nodes.append({
-        "id": tag,
-        "label": tag.replace("-", " ").title() if len(tag) <= 3 else tag.title(),
-        "type": info["type"],
-        "entryCount": len(set(node_entries[tag])),
-    })
+nodes = build_nodes(node_entries, tag_class)
 
 # Build edges list
-edges = []
-for (src, tgt), eids in sorted(filtered_edges.items(), key=lambda x: -len(x[1])):
-    unique_eids = list(set(eids))
-    edges.append({
-        "source": src,
-        "target": tgt,
-        "weight": len(unique_eids),
-        "entryIds": unique_eids[:50],
-    })
+edges = build_edges(filtered_edges)
 
 graph = {"nodes": nodes, "edges": edges}
 

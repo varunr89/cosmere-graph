@@ -8,11 +8,15 @@ with richer connections.
 
 import json
 import re
-from collections import Counter, defaultdict
+import sys
+from collections import Counter
 from pathlib import Path
 
-data_dir = Path(__file__).parent.parent / "data"
-wob_path = Path(__file__).parent.parent.parent / "words-of-brandon" / "wob_entries.json"
+sys.path.insert(0, str(Path(__file__).parent))
+from common.paths import DATA_DIR as data_dir, WOB_PATH as wob_path
+from common.html_utils import strip_html
+from common.models import MIN_EDGE_WEIGHT
+from common.graph_builder import build_cooccurrence_edges, build_nodes, build_edges
 
 # ── Load data ────────────────────────────────────────────────────────────────
 
@@ -72,14 +76,6 @@ for tag in merged_entity_tags:
 
 print(f"Text-match patterns: {len(patterns)}")
 
-# ── Strip HTML helper ────────────────────────────────────────────────────────
-
-def strip_html(text):
-    text = re.sub(r"<[^>]+>", "", text)
-    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
-    text = text.replace("&quot;", '"').replace("&#39;", "'")
-    return text.strip()
-
 # ── Process all entries: explicit tags + text-matched tags ───────────────────
 
 cleaned_entries = {}
@@ -136,46 +132,14 @@ print(f"Total implicit tag additions: {text_match_additions}")
 
 # ── Build co-occurrence graph ────────────────────────────────────────────────
 
-edge_entries = defaultdict(list)
-node_entries = defaultdict(list)
-
-for eid, tags in entry_all_tags.items():
-    tags_sorted = sorted(tags)
-    for t in tags_sorted:
-        node_entries[t].append(eid)
-    for i in range(len(tags_sorted)):
-        for j in range(i + 1, len(tags_sorted)):
-            pair = (tags_sorted[i], tags_sorted[j])
-            edge_entries[pair].append(eid)
-
-# Filter edges: weight >= 2
-MIN_EDGE_WEIGHT = 2
-filtered_edges = {
-    pair: eids for pair, eids in edge_entries.items()
-    if len(eids) >= MIN_EDGE_WEIGHT
-}
+cooc_entries = [{"id": eid, "tags": list(tags)} for eid, tags in entry_all_tags.items()]
+node_entries, filtered_edges = build_cooccurrence_edges(cooc_entries, merged_entity_tags)
 
 # Build nodes
-nodes = []
-for tag in sorted(node_entries.keys()):
-    info = tag_class.get(tag, {"type": "concept", "count": 0})
-    nodes.append({
-        "id": tag,
-        "label": tag.replace("-", " ").title() if len(tag) <= 3 else tag.title(),
-        "type": info["type"],
-        "entryCount": len(set(node_entries[tag])),
-    })
+nodes = build_nodes(node_entries, tag_class)
 
 # Build edges
-edges = []
-for (src, tgt), eids in sorted(filtered_edges.items(), key=lambda x: -len(x[1])):
-    unique_eids = list(set(eids))  # Deduplicate
-    edges.append({
-        "source": src,
-        "target": tgt,
-        "weight": len(unique_eids),
-        "entryIds": unique_eids[:50],
-    })
+edges = build_edges(filtered_edges)
 
 graph = {"nodes": nodes, "edges": edges}
 

@@ -23,25 +23,26 @@ Usage:
 import argparse
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from io import StringIO
 from pathlib import Path
 
 import numpy as np
 
-# -- Paths -------------------------------------------------------------------
-
-project_root = Path(__file__).parent.parent
-data_dir = project_root / "data"
-cache_dir = data_dir / "embeddings_cache"
-wob_path = project_root.parent / "words-of-brandon" / "wob_entries.json"
+sys.path.insert(0, str(Path(__file__).parent))
+from common.paths import DATA_DIR as data_dir, CACHE_DIR as cache_dir, WOB_PATH as wob_path
+from common.models import ALL_MODELS, EXCLUDE_TYPES, MIN_EDGE_WEIGHT
+from common.embeddings import (
+    load_embeddings as _load_embeddings,
+    normalize_embeddings,
+    compute_entity_refs as _compute_refs,
+)
+from common.graph_builder import build_cooccurrence_edges
 
 gt_path = data_dir / "disambiguation_ground_truth.json"
 tag_class_path = data_dir / "tag_classifications.json"
 
 # -- CLI ---------------------------------------------------------------------
-
-ALL_MODELS = ["azure_openai", "azure_cohere", "azure_mistral", "gemini", "voyage"]
 
 parser = argparse.ArgumentParser(
     description="Compare embedding models for Cosmere entity disambiguation",
@@ -98,7 +99,6 @@ if not tag_class_path.exists():
 with open(tag_class_path) as f:
     tag_class = json.load(f)
 
-EXCLUDE_TYPES = {"meta", "book"}
 entity_tags = {t for t, info in tag_class.items() if info["type"] not in EXCLUDE_TYPES}
 out(f"Entity tags (excl meta/book): {len(entity_tags)}")
 
@@ -159,16 +159,11 @@ MIN_ENTRIES_FOR_REF = 5
 
 def load_model_embeddings(model_name):
     """Load embeddings for a model and return the numpy array."""
-    npy_path = cache_dir / f"{model_name}.npy"
-    embeddings = np.load(npy_path)
-    assert embeddings.shape[0] == len(entry_ids), (
-        f"Shape mismatch for {model_name}: "
-        f"embeddings {embeddings.shape[0]} vs entry_ids {len(entry_ids)}"
-    )
+    embeddings, _ = _load_embeddings(model_name)
     return embeddings
 
 
-def compute_entity_refs(embeddings):
+def compute_entity_refs_for_model(embeddings):
     """
     Compute entity reference embeddings by averaging explicitly-tagged entries.
 
@@ -176,39 +171,11 @@ def compute_entity_refs(embeddings):
         entity_names: list of entity tag names (parallel to ref rows)
         entity_ref_matrix: np.array of shape (n_entities, dims), L2-normalized
     """
-    entity_names = []
-    ref_list = []
-
-    for tag in sorted(entity_tags):
-        tag_eids = [
-            eid for eid, tags in entry_explicit_tags.items()
-            if tag in tags and eid in eid_to_idx
-        ]
-        if len(tag_eids) < MIN_ENTRIES_FOR_REF:
-            continue
-
-        indices = [eid_to_idx[eid] for eid in tag_eids]
-        tag_embeddings = embeddings[indices]
-
-        ref = tag_embeddings.mean(axis=0)
-        norm = np.linalg.norm(ref)
-        if norm > 0:
-            ref = ref / norm
-
-        entity_names.append(tag)
-        ref_list.append(ref)
-
-    return entity_names, np.array(ref_list, dtype=np.float32)
-
-
-def normalize_embeddings(embeddings):
-    """L2-normalize all entry embeddings, safely handling zero-norm rows."""
-    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-    zero_mask = (norms.squeeze() == 0)
-    norms = np.where(norms == 0, 1.0, norms)
-    normed = embeddings / norms
-    normed[zero_mask] = 0.0
-    return normed
+    refs_dict = _compute_refs(embeddings, entity_tags, entry_explicit_tags, eid_to_idx,
+                              min_entries=MIN_ENTRIES_FOR_REF)
+    entity_names = list(refs_dict.keys())
+    entity_ref_matrix = np.array(list(refs_dict.values()), dtype=np.float32)
+    return entity_names, entity_ref_matrix
 
 
 def compute_sim_matrix(entries_norm, entity_refs):
@@ -224,7 +191,7 @@ out("\nLoading and precomputing per-model data...")
 model_data = {}
 for model in available_models:
     embeddings = load_model_embeddings(model)
-    entity_names, entity_refs = compute_entity_refs(embeddings)
+    entity_names, entity_refs = compute_entity_refs_for_model(embeddings)
     entries_norm = normalize_embeddings(embeddings)
     sim_matrix = compute_sim_matrix(entries_norm, entity_refs)
 
@@ -474,8 +441,6 @@ out("=" * 70)
 threshold = args.threshold
 out(f"\nThreshold: {threshold}")
 
-MIN_EDGE_WEIGHT = 2
-
 discovery_results = {}
 
 for model in available_models:
@@ -510,23 +475,8 @@ for model in available_models:
                     entries_newly_tagged += 1
 
     # Build co-occurrence graph to count isolated nodes
-    node_entries = defaultdict(list)
-    edge_entries = defaultdict(list)
-
-    for eid, tags in entry_all_tags.items():
-        tags_sorted = sorted(tags)
-        for t in tags_sorted:
-            node_entries[t].append(eid)
-        for i in range(len(tags_sorted)):
-            for j in range(i + 1, len(tags_sorted)):
-                pair = (tags_sorted[i], tags_sorted[j])
-                edge_entries[pair].append(eid)
-
-    # Filter edges by min weight
-    filtered_edges = {
-        pair: eids for pair, eids in edge_entries.items()
-        if len(eids) >= MIN_EDGE_WEIGHT
-    }
+    cooc_entries = [{"id": eid, "tags": list(tags)} for eid, tags in entry_all_tags.items()]
+    node_entries, filtered_edges = build_cooccurrence_edges(cooc_entries, entity_tags)
 
     # Count isolated nodes
     connected = set()

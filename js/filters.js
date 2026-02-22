@@ -45,14 +45,14 @@ function toggleFilter(type, btn) {
 export function applyFilters() {
   window._nodes.select('.gem-node')
     .transition().duration(200)
-    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.85 : 0.04; })
-    .attr('stroke-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.3 : 0.02; });
+    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.85 : 0; })
+    .attr('stroke-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.3 : 0; });
   window._nodes.select('.gem-glow')
     .transition().duration(200)
-    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.1 : 0.01; });
+    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.1 : 0; });
   window._nodes.select('.gem-label')
     .transition().duration(200)
-    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.75 : 0.03; });
+    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.75 : 0; });
 
   // Hide edges connected to filtered-out node types
   function edgeVisible(d) {
@@ -63,13 +63,13 @@ export function applyFilters() {
   if (window._links) {
     window._links
       .transition().duration(200)
-      .attr('stroke-opacity', function(d) { return edgeVisible(d) ? 1 : 0.02; });
+      .attr('stroke-opacity', function(d) { return edgeVisible(d) ? 1 : 0; });
   }
   if (state.implicitLinks) {
     state.implicitLinks
       .transition().duration(200)
       .attr('stroke-opacity', function(d) {
-        if (!edgeVisible(d)) return 0.02;
+        if (!edgeVisible(d)) return 0;
         return d.type === 'mixed' ? 0.55 : 0.4;
       });
   }

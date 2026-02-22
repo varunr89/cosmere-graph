@@ -3,6 +3,7 @@
 import * as state from './state.js';
 import { renderImplicitEdges } from './hypothesis.js';
 import { populateReviewPanel } from './review.js';
+import { applyFilters } from './filters.js';
 
 export function buildExplicitTagsByEntry() {
   var eids = Object.keys(state.entries);
@@ -103,6 +104,7 @@ function loadScoresAndCompute(applyBtn, statsEl) {
 
       // Render hypothesis layer (implicit edges) and populate review panel
       renderImplicitEdges(result);
+      applyFilters();
       populateReviewPanel(result);
 
       // Show edge layer toggle and review button

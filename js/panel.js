@@ -35,12 +35,12 @@ export function focusNode(nodeId) {
     .attr('fill-opacity', function(d) {
       if (d.id === nodeId) return 1;
       if (neighbors.has(d.id)) return 0.85;
-      return 0.04;
+      return 0;
     })
     .attr('stroke-opacity', function(d) {
       if (d.id === nodeId) return 0.8;
       if (neighbors.has(d.id)) return 0.4;
-      return 0.02;
+      return 0;
     })
     .attr('transform', function(d) { return d.id === nodeId ? 'scale(1.3)' : 'scale(1)'; });
 
@@ -50,7 +50,7 @@ export function focusNode(nodeId) {
     .attr('fill-opacity', function(d) {
       if (d.id === nodeId) return 0.3;
       if (neighbors.has(d.id)) return 0.15;
-      return 0.01;
+      return 0;
     })
     .attr('r', function(d) {
       var base = window._sizeScale(d.entryCount) * 1.8;
@@ -60,7 +60,7 @@ export function focusNode(nodeId) {
   // Labels
   window._nodes.select('.gem-label')
     .transition().duration(300)
-    .attr('fill-opacity', function(d) { return (d.id === nodeId || neighbors.has(d.id)) ? 0.9 : 0.03; });
+    .attr('fill-opacity', function(d) { return (d.id === nodeId || neighbors.has(d.id)) ? 0.9 : 0; });
 
   // Edges -- respect type filters
   function linkFilteredOut(d) {
@@ -71,10 +71,10 @@ export function focusNode(nodeId) {
 
   window._links
     .attr('stroke', function(d) {
-      if (linkFilteredOut(d)) return 'rgba(200,223,255,0.03)';
+      if (linkFilteredOut(d)) return 'rgba(200,223,255,0)';
       var src = typeof d.source === 'object' ? d.source.id : d.source;
       var tgt = typeof d.target === 'object' ? d.target.id : d.target;
-      return (src === nodeId || tgt === nodeId) ? focusGlow : 'rgba(200,223,255,0.03)';
+      return (src === nodeId || tgt === nodeId) ? focusGlow : 'rgba(200,223,255,0)';
     });
 
   // Pulse connected edges (only if both endpoints are active)
@@ -98,7 +98,7 @@ export function focusNode(nodeId) {
     return src !== nodeId && tgt !== nodeId;
   })
     .transition().duration(300)
-    .attr('stroke-opacity', function(d) { return linkFilteredOut(d) ? 0.02 : 0.3; });
+    .attr('stroke-opacity', function(d) { return linkFilteredOut(d) ? 0 : 0.3; });
 
   // Center camera
   if (node && typeof node.x === 'number') {
@@ -117,18 +117,18 @@ export function unfocus() {
 
   window._nodes.select('.gem-node')
     .transition().duration(300)
-    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.85 : 0.04; })
-    .attr('stroke-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.3 : 0.02; })
+    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.85 : 0; })
+    .attr('stroke-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.3 : 0; })
     .attr('transform', 'scale(1)');
 
   window._nodes.select('.gem-glow')
     .transition().duration(300)
-    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.1 : 0.01; })
+    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.1 : 0; })
     .attr('r', function(d) { return window._sizeScale(d.entryCount) * 1.8; });
 
   window._nodes.select('.gem-label')
     .transition().duration(300)
-    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.75 : 0.03; });
+    .attr('fill-opacity', function(d) { return state.activeFilters.has(d.type) ? 0.75 : 0; });
 
   window._links
     .transition().duration(300)
@@ -136,7 +136,7 @@ export function unfocus() {
     .attr('stroke-opacity', function(d) {
       var srcType = typeof d.source === 'object' ? d.source.type : null;
       var tgtType = typeof d.target === 'object' ? d.target.type : null;
-      return (state.activeFilters.has(srcType) && state.activeFilters.has(tgtType)) ? 1 : 0.02;
+      return (state.activeFilters.has(srcType) && state.activeFilters.has(tgtType)) ? 1 : 0;
     });
 
   if (state.implicitLinks) {
@@ -145,7 +145,7 @@ export function unfocus() {
       .attr('stroke-opacity', function(d) {
         var srcType = typeof d.source === 'object' ? d.source.type : null;
         var tgtType = typeof d.target === 'object' ? d.target.type : null;
-        if (!state.activeFilters.has(srcType) || !state.activeFilters.has(tgtType)) return 0.02;
+        if (!state.activeFilters.has(srcType) || !state.activeFilters.has(tgtType)) return 0;
         return d.type === 'mixed' ? 0.55 : 0.4;
       });
   }

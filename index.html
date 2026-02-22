@@ -2256,16 +2256,24 @@ function focusNode(nodeId) {
     .transition().duration(300)
     .attr('fill-opacity', function(d) { return (d.id === nodeId || neighbors.has(d.id)) ? 0.9 : 0.03; });
 
-  // Edges
+  // Edges -- respect type filters
+  function linkFilteredOut(d) {
+    var srcType = typeof d.source === 'object' ? d.source.type : null;
+    var tgtType = typeof d.target === 'object' ? d.target.type : null;
+    return !activeFilters.has(srcType) || !activeFilters.has(tgtType);
+  }
+
   window._links
     .attr('stroke', function(d) {
+      if (linkFilteredOut(d)) return 'rgba(200,223,255,0.03)';
       var src = typeof d.source === 'object' ? d.source.id : d.source;
       var tgt = typeof d.target === 'object' ? d.target.id : d.target;
       return (src === nodeId || tgt === nodeId) ? focusGlow : 'rgba(200,223,255,0.03)';
     });
 
-  // Pulse connected edges
+  // Pulse connected edges (only if both endpoints are active)
   window._links.filter(function(d) {
+    if (linkFilteredOut(d)) return false;
     var src = typeof d.source === 'object' ? d.source.id : d.source;
     var tgt = typeof d.target === 'object' ? d.target.id : d.target;
     return src === nodeId || tgt === nodeId;
@@ -2276,14 +2284,15 @@ function focusNode(nodeId) {
     .transition().duration(500)
     .attr('stroke-opacity', 0.4);
 
-  // Dim unconnected edges
+  // Dim unconnected or filtered-out edges
   window._links.filter(function(d) {
+    if (linkFilteredOut(d)) return true;
     var src = typeof d.source === 'object' ? d.source.id : d.source;
     var tgt = typeof d.target === 'object' ? d.target.id : d.target;
     return src !== nodeId && tgt !== nodeId;
   })
     .transition().duration(300)
-    .attr('stroke-opacity', 0.3);
+    .attr('stroke-opacity', function(d) { return linkFilteredOut(d) ? 0.02 : 0.3; });
 
   // Center camera
   if (node && typeof node.x === 'number') {
@@ -2318,7 +2327,22 @@ function unfocus() {
   window._links
     .transition().duration(300)
     .attr('stroke', 'rgba(200,223,255,0.06)')
-    .attr('stroke-opacity', 1);
+    .attr('stroke-opacity', function(d) {
+      var srcType = typeof d.source === 'object' ? d.source.type : null;
+      var tgtType = typeof d.target === 'object' ? d.target.type : null;
+      return (activeFilters.has(srcType) && activeFilters.has(tgtType)) ? 1 : 0.02;
+    });
+
+  if (implicitLinks) {
+    implicitLinks
+      .transition().duration(300)
+      .attr('stroke-opacity', function(d) {
+        var srcType = typeof d.source === 'object' ? d.source.type : null;
+        var tgtType = typeof d.target === 'object' ? d.target.type : null;
+        if (!activeFilters.has(srcType) || !activeFilters.has(tgtType)) return 0.02;
+        return d.type === 'mixed' ? 0.55 : 0.4;
+      });
+  }
 
   closePanel();
 
@@ -2783,6 +2807,26 @@ function applyFilters() {
   window._nodes.select('.gem-label')
     .transition().duration(200)
     .attr('fill-opacity', function(d) { return activeFilters.has(d.type) ? 0.75 : 0.03; });
+
+  // Hide edges connected to filtered-out node types
+  function edgeVisible(d) {
+    var srcType = typeof d.source === 'object' ? d.source.type : null;
+    var tgtType = typeof d.target === 'object' ? d.target.type : null;
+    return activeFilters.has(srcType) && activeFilters.has(tgtType);
+  }
+  if (window._links) {
+    window._links
+      .transition().duration(200)
+      .attr('stroke-opacity', function(d) { return edgeVisible(d) ? 1 : 0.02; });
+  }
+  if (implicitLinks) {
+    implicitLinks
+      .transition().duration(200)
+      .attr('stroke-opacity', function(d) {
+        if (!edgeVisible(d)) return 0.02;
+        return d.type === 'mixed' ? 0.55 : 0.4;
+      });
+  }
 }
 
 // ── Search ──────────────────────────────────────────────────────────────────

@@ -1,0 +1,59 @@
+/* ── Variables ──────────────────────────────────────────────── */
+:root {
+  --gem-sapphire: #2E5BA8;
+  --gem-sapphire-glow: #4A8BDF;
+  --gem-sapphire-light: #6AADFF;
+  --gem-emerald: #2D8B57;
+  --gem-emerald-glow: #3FBF7F;
+  --gem-emerald-light: #5FE8A0;
+  --gem-amethyst: #7B4BAA;
+  --gem-amethyst-glow: #A66ED8;
+  --gem-amethyst-light: #C490F0;
+  --gem-heliodor: #C49A2A;
+  --gem-heliodor-glow: #E8C44A;
+  --gem-heliodor-light: #F0D870;
+  --gem-ruby: #B03A3A;
+  --gem-ruby-glow: #D45A5A;
+  --gem-ruby-light: #E87070;
+
+  --bg-deep: #080C14;
+  --bg-edge: #0E1524;
+  --stormlight: #C8DFFF;
+  --crem: #2A2F3A;
+  --frost: rgba(200, 220, 255, 0.05);
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: system-ui, -apple-system, sans-serif;
+
+  --panel-gem-color: var(--gem-sapphire);
+  --panel-gem-glow: var(--gem-sapphire-glow);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  background: radial-gradient(ellipse at center, var(--bg-deep) 0%, var(--bg-edge) 100%);
+  color: #e0e0e0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+#panel::-webkit-scrollbar { width: 6px; }
+#panel::-webkit-scrollbar-track { background: transparent; }
+#panel::-webkit-scrollbar-thumb {
+  background: rgba(200, 223, 255, 0.1);
+  border-radius: 3px;
+}
+#panel::-webkit-scrollbar-thumb:hover { background: rgba(200, 223, 255, 0.2); }
+
+/* ── Scrollbar for review panel ─────────────────────────── */
+#review-panel::-webkit-scrollbar { width: 6px; }
+#review-panel::-webkit-scrollbar-track { background: transparent; }
+#review-panel::-webkit-scrollbar-thumb {
+  background: rgba(200, 223, 255, 0.1);
+  border-radius: 3px;
+}
+#review-panel::-webkit-scrollbar-thumb:hover { background: rgba(200, 223, 255, 0.2); }

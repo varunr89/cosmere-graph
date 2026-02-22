@@ -1,0 +1,100 @@
+/* ── Graph ─────────────────────────────────────────────────── */
+#graph-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+svg { width: 100%; height: 100%; }
+
+/* ── Header ────────────────────────────────────────────────── */
+#header {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.6s ease 0.2s;
+}
+#title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--stormlight);
+  letter-spacing: 0.5px;
+}
+#subtitle {
+  font-size: 11px;
+  color: #556677;
+  margin-top: 2px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+#header-line {
+  height: 1px;
+  margin: 10px 0 14px;
+  width: 280px;
+  background: linear-gradient(
+    to right,
+    var(--gem-sapphire),
+    var(--gem-emerald),
+    var(--gem-amethyst),
+    var(--gem-heliodor),
+    var(--gem-ruby),
+    transparent
+  );
+  opacity: 0.5;
+}
+
+/* ── Tooltip ───────────────────────────────────────────────── */
+#tooltip {
+  position: absolute;
+  z-index: 30;
+  background: rgba(10, 14, 24, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--crem);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  pointer-events: none;
+  display: none;
+  max-width: 260px;
+}
+#tooltip .tt-name { font-weight: 600; }
+#tooltip .tt-meta {
+  font-size: 11px;
+  color: rgba(200, 223, 255, 0.4);
+  margin-top: 2px;
+}
+
+/* ── Info bar ──────────────────────────────────────────────── */
+#info {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 10;
+  font-size: 12px;
+  color: #334455;
+  background: rgba(10, 14, 24, 0.6);
+  backdrop-filter: blur(12px);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(200, 223, 255, 0.04);
+  opacity: 0;
+  transition: opacity 0.6s ease 0.4s;
+}
+#info .info-title {
+  font-family: var(--font-display);
+  color: rgba(200, 223, 255, 0.3);
+}
+#info a {
+  color: rgba(200, 223, 255, 0.4);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(200, 223, 255, 0.15);
+  transition: color 0.2s, border-color 0.2s;
+}
+#info a:hover {
+  color: var(--stormlight);
+  border-bottom-color: var(--stormlight);
+}

@@ -1,0 +1,709 @@
+/* ── Embedding Controls Bar ──────────────────────────────── */
+#embedding-controls-bar {
+  position: absolute;
+  bottom: 56px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 14, 24, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--crem);
+  border-radius: 10px;
+  padding: 8px 14px;
+  opacity: 0;
+  transition: opacity 0.6s ease 0.5s;
+}
+
+#embedding-controls-bar .bar-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--gem-heliodor-glow);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+#tuning-toggle-btn {
+  background: none;
+  border: 1px solid var(--crem);
+  border-radius: 6px;
+  color: var(--stormlight);
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+#tuning-toggle-btn:hover {
+  border-color: var(--gem-heliodor);
+  color: var(--gem-heliodor-glow);
+  background: rgba(232, 196, 74, 0.06);
+}
+
+#apply-embeddings-btn {
+  background: linear-gradient(135deg, var(--gem-heliodor), #9a7a1a);
+  border: none;
+  border-radius: 6px;
+  color: #0a0c14;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 18px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+#apply-embeddings-btn:hover {
+  box-shadow: 0 0 12px rgba(232, 196, 74, 0.3);
+}
+#apply-embeddings-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+#embedding-stats {
+  font-size: 11px;
+  color: rgba(200, 223, 255, 0.45);
+  white-space: nowrap;
+}
+
+/* ── Tuning Panel (collapsible) ──────────────────────────── */
+#tuning-panel {
+  position: absolute;
+  bottom: 104px;
+  left: 16px;
+  z-index: 10;
+  background: rgba(10, 14, 24, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--crem);
+  border-radius: 10px;
+  padding: 18px 20px;
+  width: 340px;
+  display: none;
+}
+#tuning-panel.open {
+  display: block;
+}
+
+#tuning-panel h3 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gem-heliodor-glow);
+  margin-bottom: 14px;
+  letter-spacing: 0.3px;
+}
+
+.tuning-row {
+  margin-bottom: 14px;
+}
+.tuning-row:last-child {
+  margin-bottom: 0;
+}
+
+.tuning-row label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(200, 223, 255, 0.7);
+  margin-bottom: 5px;
+}
+
+.tuning-row .slider-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gem-heliodor-glow);
+  min-width: 32px;
+  text-align: right;
+}
+
+.tuning-row input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--crem);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.tuning-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gem-heliodor);
+  box-shadow: 0 0 6px rgba(232, 196, 74, 0.4);
+  cursor: pointer;
+  border: 2px solid var(--gem-heliodor-glow);
+}
+.tuning-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gem-heliodor);
+  box-shadow: 0 0 6px rgba(232, 196, 74, 0.4);
+  cursor: pointer;
+  border: 2px solid var(--gem-heliodor-glow);
+}
+
+.tuning-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.tuning-checkbox-row input[type="checkbox"] {
+  accent-color: var(--gem-heliodor);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.tuning-checkbox-row label {
+  font-size: 12px;
+  color: rgba(200, 223, 255, 0.7);
+  cursor: pointer;
+}
+
+/* ── Edge Layer Toggle ──────────────────────────────────── */
+#edge-layer-toggle {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--crem);
+}
+#edge-layer-toggle.visible {
+  display: flex;
+}
+.edge-layer-option {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.edge-layer-option input[type="radio"] {
+  accent-color: var(--gem-heliodor);
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  margin: 0;
+}
+.edge-layer-option label {
+  font-size: 11px;
+  color: rgba(200, 223, 255, 0.6);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Review Panel (right-side drawer) ──────────────────── */
+#review-toggle-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--crem);
+  border-radius: 6px;
+  color: var(--stormlight);
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+#review-toggle-btn.visible {
+  display: inline-block;
+}
+#review-toggle-btn:hover {
+  border-color: var(--gem-heliodor);
+  color: var(--gem-heliodor-glow);
+  background: rgba(232, 196, 74, 0.06);
+}
+
+#review-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 440px;
+  height: 100vh;
+  background: rgba(10, 14, 24, 0.94);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid var(--crem);
+  z-index: 25;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.35s ease;
+  padding: 24px 20px;
+}
+#review-panel.open {
+  transform: translateX(0);
+}
+#review-panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gem-heliodor);
+  box-shadow: 0 0 12px var(--gem-heliodor-glow), 0 0 25px var(--gem-heliodor-glow);
+  opacity: 0;
+  transition: opacity 0.3s ease 0.15s;
+}
+#review-panel.open::before {
+  opacity: 1;
+}
+
+#review-panel h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gem-heliodor-glow);
+  margin-bottom: 4px;
+}
+#review-panel .review-subtitle {
+  font-size: 11px;
+  color: rgba(200, 223, 255, 0.4);
+  margin-bottom: 14px;
+}
+
+#review-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #556;
+  font-size: 22px;
+  cursor: pointer;
+  transition: color 0.2s, text-shadow 0.2s;
+  z-index: 1;
+}
+#review-close-btn:hover {
+  color: var(--gem-heliodor-glow);
+  text-shadow: 0 0 8px var(--gem-heliodor-glow);
+}
+
+#review-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+#save-reviews-btn {
+  background: linear-gradient(135deg, var(--gem-heliodor), #9a7a1a);
+  border: none;
+  border-radius: 6px;
+  color: #0a0c14;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+#save-reviews-btn:hover,
+#load-reviews-btn:hover {
+  box-shadow: 0 0 12px rgba(232, 196, 74, 0.3);
+}
+#load-reviews-btn {
+  background: rgba(10, 14, 24, 0.8);
+  border: 1px solid var(--gem-heliodor);
+  border-radius: 6px;
+  color: var(--gem-heliodor-glow);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+#review-filter-label {
+  font-size: 11px;
+  color: rgba(200, 223, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#review-filter-unreviewed {
+  accent-color: var(--gem-heliodor);
+}
+
+#review-sort-select {
+  background: rgba(10, 14, 24, 0.8);
+  border: 1px solid var(--crem);
+  border-radius: 6px;
+  color: var(--stormlight);
+  font-size: 11px;
+  padding: 4px 8px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.review-table {
+  width: 100%;
+}
+
+.review-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(200, 223, 255, 0.04);
+  transition: background 0.15s;
+}
+.review-row:hover {
+  background: rgba(200, 223, 255, 0.03);
+}
+.review-row.confirmed {
+  border-left: 2px solid var(--gem-emerald-glow);
+  padding-left: 4px;
+}
+.review-row.rejected {
+  border-left: 2px solid var(--gem-ruby-glow);
+  padding-left: 4px;
+  opacity: 0.5;
+}
+.review-entity {
+  flex: 1;
+  font-size: 13px;
+  color: var(--gem-heliodor-glow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-entry-id {
+  font-size: 10px;
+  color: rgba(200, 223, 255, 0.3);
+  flex: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-score {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--stormlight);
+  min-width: 40px;
+  text-align: right;
+}
+.review-actions-cell {
+  display: flex;
+  gap: 4px;
+}
+.review-confirm,
+.review-reject {
+  background: none;
+  border: 1px solid var(--crem);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.review-confirm {
+  color: var(--gem-emerald-glow);
+}
+.review-confirm:hover {
+  background: rgba(63, 191, 127, 0.1);
+  border-color: var(--gem-emerald);
+}
+.review-reject {
+  color: var(--gem-ruby-glow);
+}
+.review-reject:hover {
+  background: rgba(212, 90, 90, 0.1);
+  border-color: var(--gem-ruby);
+}
+
+/* ── Guide Modal ──────────────────────────────────────────── */
+#guide-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--gem-sapphire);
+  border-radius: 20px;
+  background: rgba(46, 91, 168, 0.12);
+  backdrop-filter: blur(8px);
+  color: var(--gem-sapphire-glow);
+  font-size: 11px;
+  font-family: var(--font-body);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s, background 0.3s, box-shadow 0.3s;
+  box-shadow: 0 0 8px rgba(74, 139, 223, 0.15);
+}
+#guide-btn:hover {
+  color: var(--stormlight);
+  border-color: var(--gem-sapphire-glow);
+  background: rgba(46, 91, 168, 0.2);
+  box-shadow: 0 0 16px rgba(74, 139, 223, 0.3);
+}
+
+#guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 6, 10, 0.8);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+#guide-overlay.open {
+  display: flex;
+  opacity: 1;
+}
+
+#guide-modal {
+  position: relative;
+  width: min(680px, calc(100vw - 48px));
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: rgba(10, 14, 24, 0.96);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--crem);
+  border-radius: 14px;
+  padding: 40px 44px 44px;
+  transform: translateY(16px);
+  transition: transform 0.4s ease;
+}
+#guide-overlay.open #guide-modal {
+  transform: translateY(0);
+}
+
+/* Animated gemstone left accent */
+#guide-modal::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 14px 0 0 14px;
+  background: linear-gradient(
+    180deg,
+    var(--gem-sapphire-glow),
+    var(--gem-emerald-glow),
+    var(--gem-amethyst-glow),
+    var(--gem-heliodor-glow),
+    var(--gem-ruby-glow)
+  );
+  background-size: 100% 200%;
+  animation: guideGemShift 8s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 12px var(--gem-sapphire-glow),
+    0 0 24px rgba(74, 139, 223, 0.15);
+}
+@keyframes guideGemShift {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 0% 100%; }
+}
+
+#guide-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #556;
+  font-size: 22px;
+  cursor: pointer;
+  transition: color 0.2s, text-shadow 0.2s;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#guide-close:hover {
+  color: var(--stormlight);
+  text-shadow: 0 0 8px rgba(200, 223, 255, 0.3);
+}
+
+.guide-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--stormlight);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.guide-epigraph {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-style: italic;
+  color: rgba(200, 223, 255, 0.3);
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+.guide-section {
+  margin-bottom: 28px;
+}
+.guide-section:last-child { margin-bottom: 0; }
+
+.guide-section h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.guide-section h3 .guide-gem {
+  width: 10px;
+  height: 11px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  flex-shrink: 0;
+}
+
+.guide-section p,
+.guide-section li {
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: rgba(200, 223, 255, 0.7);
+}
+.guide-section p { margin-bottom: 10px; }
+.guide-section p:last-child { margin-bottom: 0; }
+
+.guide-section ul {
+  list-style: none;
+  padding: 0;
+}
+.guide-section li {
+  padding: 3px 0 3px 18px;
+  position: relative;
+}
+.guide-section li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 12px;
+  width: 5px;
+  height: 6px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: var(--gem-sapphire-glow);
+}
+
+.guide-divider {
+  height: 1px;
+  margin: 24px 0;
+  background: linear-gradient(
+    to right,
+    var(--gem-sapphire),
+    var(--gem-emerald),
+    var(--gem-amethyst),
+    var(--gem-heliodor),
+    var(--gem-ruby),
+    transparent
+  );
+  opacity: 0.25;
+}
+
+/* Gemstone legend row */
+.gem-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0;
+}
+.gem-legend-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(200, 223, 255, 0.7);
+}
+.gem-legend-dot {
+  width: 10px;
+  height: 11px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.gem-legend-name {
+  font-weight: 600;
+  min-width: 70px;
+}
+.gem-legend-examples {
+  font-style: italic;
+  color: rgba(200, 223, 255, 0.4);
+}
+
+/* Tuning table */
+.guide-tuning-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 12.5px;
+}
+.guide-tuning-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: rgba(200, 223, 255, 0.5);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(200, 223, 255, 0.08);
+}
+.guide-tuning-table td {
+  padding: 10px 10px;
+  color: rgba(200, 223, 255, 0.65);
+  line-height: 1.65;
+  border-bottom: 1px solid rgba(200, 223, 255, 0.04);
+  vertical-align: top;
+}
+.guide-tuning-table td:first-child {
+  color: var(--gem-heliodor-glow);
+  font-weight: 600;
+  white-space: nowrap;
+  width: 140px;
+}
+.guide-tuning-example {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(200, 223, 255, 0.35);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.guide-kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--crem);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-body);
+  color: rgba(200, 223, 255, 0.6);
+  background: rgba(200, 223, 255, 0.04);
+}
+
+/* Scrollbar */
+#guide-modal::-webkit-scrollbar { width: 6px; }
+#guide-modal::-webkit-scrollbar-track { background: transparent; }
+#guide-modal::-webkit-scrollbar-thumb {
+  background: rgba(200, 223, 255, 0.1);
+  border-radius: 3px;
+}
+#guide-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 223, 255, 0.2);
+}

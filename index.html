@@ -259,7 +259,7 @@
     gap: 6px;
     flex-wrap: wrap;
     justify-content: flex-end;
-    max-width: 520px;
+    max-width: 680px;
     opacity: 0;
     transition: opacity 0.6s ease 0.3s;
   }
@@ -1016,6 +1016,450 @@
     border-radius: 3px;
   }
   #review-panel::-webkit-scrollbar-thumb:hover { background: rgba(200, 223, 255, 0.2); }
+
+  /* ── Backdrop overlay (for mobile panels) ────────────────── */
+  .panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .panel-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ── Tablet (max-width: 768px) ───────────────────────────── */
+  @media (max-width: 768px) {
+    /* SVG touch action */
+    #graph-container { touch-action: none; }
+
+    /* Header */
+    #header { left: 12px; top: 12px; }
+    #title { font-size: 18px; }
+    #search-input { width: calc(100vw - 40px); }
+    #search-suggestions { width: calc(100vw - 40px); }
+    #header-line { width: calc(100vw - 40px); }
+
+    /* Filters -- reposition to bottom, horizontally scrollable */
+    #filters {
+      top: auto;
+      bottom: 140px;
+      right: 12px;
+      left: 12px;
+      max-width: none;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      justify-content: flex-start;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #filters::-webkit-scrollbar { display: none; }
+    .filter-btn { padding: 6px 10px; flex-shrink: 0; }
+
+    /* Side panel -- full width with backdrop */
+    #panel { width: 100vw; }
+
+    /* Review panel -- full width with backdrop */
+    #review-panel { width: 100vw; }
+
+    /* Tuning panel -- reposition and widen */
+    #tuning-panel {
+      width: calc(100vw - 32px);
+      left: 16px;
+      right: 16px;
+      bottom: 104px;
+    }
+
+    /* Embedding controls bar -- allow wrapping */
+    #embedding-controls-bar {
+      flex-wrap: wrap;
+      left: 12px;
+      right: 12px;
+      bottom: 48px;
+    }
+    #embedding-stats {
+      width: 100%;
+      white-space: normal;
+      margin-top: 2px;
+    }
+
+    /* Info bar -- hide on mobile */
+    #info { display: none; }
+
+    /* Guide modal -- full width on mobile */
+    #guide-modal {
+      width: calc(100vw - 24px);
+      max-height: calc(100vh - 40px);
+      padding: 28px 22px 32px;
+    }
+    .guide-title { font-size: 22px; }
+    .guide-tuning-table td:first-child { width: auto; white-space: normal; }
+    #guide-close { width: 44px; height: 44px; font-size: 26px; }
+
+    /* ── Touch targets (minimum 44px) ─────────────────────── */
+    .filter-btn {
+      min-height: 44px;
+      padding: 10px 14px;
+    }
+    #panel-close,
+    #review-close-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    .review-confirm,
+    .review-reject {
+      padding: 8px 12px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+    #tuning-toggle-btn,
+    #apply-embeddings-btn {
+      min-height: 44px;
+      padding: 10px 16px;
+    }
+    #save-reviews-btn,
+    #load-reviews-btn {
+      min-height: 44px;
+      padding: 10px 16px;
+    }
+    #review-toggle-btn {
+      min-height: 44px;
+      padding: 10px 16px;
+    }
+
+    /* Larger slider thumbs for touch */
+    .tuning-row input[type="range"]::-webkit-slider-thumb {
+      width: 24px;
+      height: 24px;
+    }
+    .tuning-row input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Larger radio buttons */
+    .edge-layer-option input[type="radio"] {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Larger checkboxes */
+    .tuning-checkbox-row input[type="checkbox"],
+    #review-filter-unreviewed {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Edge layer toggle -- wrap for touch */
+    #edge-layer-toggle {
+      gap: 10px;
+    }
+    .edge-layer-option {
+      gap: 6px;
+    }
+    .edge-layer-option label {
+      font-size: 13px;
+    }
+  }
+
+  /* ── Guide Modal ──────────────────────────────────────────── */
+  #guide-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 16px;
+    border: 1px solid var(--gem-sapphire);
+    border-radius: 20px;
+    background: rgba(46, 91, 168, 0.12);
+    backdrop-filter: blur(8px);
+    color: var(--gem-sapphire-glow);
+    font-size: 11px;
+    font-family: var(--font-body);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s, border-color 0.3s, background 0.3s, box-shadow 0.3s;
+    box-shadow: 0 0 8px rgba(74, 139, 223, 0.15);
+  }
+  #guide-btn:hover {
+    color: var(--stormlight);
+    border-color: var(--gem-sapphire-glow);
+    background: rgba(46, 91, 168, 0.2);
+    box-shadow: 0 0 16px rgba(74, 139, 223, 0.3);
+  }
+
+  #guide-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 6, 10, 0.8);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  #guide-overlay.open {
+    display: flex;
+    opacity: 1;
+  }
+
+  #guide-modal {
+    position: relative;
+    width: min(680px, calc(100vw - 48px));
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    background: rgba(10, 14, 24, 0.96);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--crem);
+    border-radius: 14px;
+    padding: 40px 44px 44px;
+    transform: translateY(16px);
+    transition: transform 0.4s ease;
+  }
+  #guide-overlay.open #guide-modal {
+    transform: translateY(0);
+  }
+
+  /* Animated gemstone left accent */
+  #guide-modal::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 14px 0 0 14px;
+    background: linear-gradient(
+      180deg,
+      var(--gem-sapphire-glow),
+      var(--gem-emerald-glow),
+      var(--gem-amethyst-glow),
+      var(--gem-heliodor-glow),
+      var(--gem-ruby-glow)
+    );
+    background-size: 100% 200%;
+    animation: guideGemShift 8s ease-in-out infinite alternate;
+    box-shadow:
+      0 0 12px var(--gem-sapphire-glow),
+      0 0 24px rgba(74, 139, 223, 0.15);
+  }
+  @keyframes guideGemShift {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 0% 100%; }
+  }
+
+  #guide-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #556;
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s, text-shadow 0.2s;
+    z-index: 1;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #guide-close:hover {
+    color: var(--stormlight);
+    text-shadow: 0 0 8px rgba(200, 223, 255, 0.3);
+  }
+
+  .guide-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--stormlight);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .guide-epigraph {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-style: italic;
+    color: rgba(200, 223, 255, 0.3);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .guide-section {
+    margin-bottom: 28px;
+  }
+  .guide-section:last-child { margin-bottom: 0; }
+
+  .guide-section h3 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .guide-section h3 .guide-gem {
+    width: 10px;
+    height: 11px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    flex-shrink: 0;
+  }
+
+  .guide-section p,
+  .guide-section li {
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: rgba(200, 223, 255, 0.7);
+  }
+  .guide-section p { margin-bottom: 10px; }
+  .guide-section p:last-child { margin-bottom: 0; }
+
+  .guide-section ul {
+    list-style: none;
+    padding: 0;
+  }
+  .guide-section li {
+    padding: 3px 0 3px 18px;
+    position: relative;
+  }
+  .guide-section li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 12px;
+    width: 5px;
+    height: 6px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: var(--gem-sapphire-glow);
+  }
+
+  .guide-divider {
+    height: 1px;
+    margin: 24px 0;
+    background: linear-gradient(
+      to right,
+      var(--gem-sapphire),
+      var(--gem-emerald),
+      var(--gem-amethyst),
+      var(--gem-heliodor),
+      var(--gem-ruby),
+      transparent
+    );
+    opacity: 0.25;
+  }
+
+  /* Gemstone legend row */
+  .gem-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 14px 0;
+  }
+  .gem-legend-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: rgba(200, 223, 255, 0.7);
+  }
+  .gem-legend-dot {
+    width: 10px;
+    height: 11px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .gem-legend-name {
+    font-weight: 600;
+    min-width: 70px;
+  }
+  .gem-legend-examples {
+    font-style: italic;
+    color: rgba(200, 223, 255, 0.4);
+  }
+
+  /* Tuning table */
+  .guide-tuning-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 12.5px;
+  }
+  .guide-tuning-table th {
+    text-align: left;
+    padding: 8px 10px;
+    color: rgba(200, 223, 255, 0.5);
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(200, 223, 255, 0.08);
+  }
+  .guide-tuning-table td {
+    padding: 10px 10px;
+    color: rgba(200, 223, 255, 0.65);
+    line-height: 1.65;
+    border-bottom: 1px solid rgba(200, 223, 255, 0.04);
+    vertical-align: top;
+  }
+  .guide-tuning-table td:first-child {
+    color: var(--gem-heliodor-glow);
+    font-weight: 600;
+    white-space: nowrap;
+    width: 140px;
+  }
+  .guide-tuning-example {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: rgba(200, 223, 255, 0.35);
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .guide-kbd {
+    display: inline-block;
+    padding: 2px 7px;
+    border: 1px solid var(--crem);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--font-body);
+    color: rgba(200, 223, 255, 0.6);
+    background: rgba(200, 223, 255, 0.04);
+  }
+
+  /* Scrollbar */
+  #guide-modal::-webkit-scrollbar { width: 6px; }
+  #guide-modal::-webkit-scrollbar-track { background: transparent; }
+  #guide-modal::-webkit-scrollbar-thumb {
+    background: rgba(200, 223, 255, 0.1);
+    border-radius: 3px;
+  }
+  #guide-modal::-webkit-scrollbar-thumb:hover {
+    background: rgba(200, 223, 255, 0.2);
+  }
+
+  /* ── Phone (max-width: 480px) ────────────────────────────── */
+  @media (max-width: 480px) {
+    #title { font-size: 16px; }
+    #subtitle { display: none; }
+    #panel h2 { font-size: 20px; }
+    .connection-item { padding: 10px 10px; }
+  }
 </style>
 </head>
 <body>
@@ -1063,6 +1507,7 @@
     <button id="search-clear">&times;</button>
     <div id="search-suggestions"></div>
   </div>
+  <button id="guide-btn">Worldhopper's Guide</button>
 </div>
 
 <!-- ── Filters ───────────────────────────────────────────────── -->
@@ -1165,6 +1610,139 @@
   <div class="review-table" id="review-table"></div>
 </div>
 
+<!-- ── Guide Modal ─────────────────────────────────────────── -->
+<div id="guide-overlay">
+  <div id="guide-modal">
+    <button id="guide-close">&times;</button>
+
+    <div class="guide-title">Welcome, Worldhopper</div>
+    <div class="guide-epigraph">"The most important step a man can take. It's not the first one, is it?<br>It's the next one. Always the next one."</div>
+
+    <div class="guide-section">
+      <p>You're looking at a map of every connection Brandon Sanderson has drawn between the people, places, and powers of the Cosmere -- built from <strong style="color:var(--stormlight)">16,282</strong> of his own answers to fan questions.</p>
+      <p>Each gemstone is an entity he's discussed. Each thread between them is a connection he's made -- two topics mentioned in the same Q&amp;A. The bigger the gemstone, the more he's talked about it. Kaladin blazes large. Geranid, less so.</p>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-section">
+      <h3><span class="guide-gem" style="background:var(--gem-sapphire-glow)"></span>The Gemstones</h3>
+      <p>Five gemstone types, five kinds of Cosmere knowledge:</p>
+      <div class="gem-legend">
+        <div class="gem-legend-row">
+          <span class="gem-legend-dot" style="background:var(--gem-sapphire-glow)"></span>
+          <span class="gem-legend-name" style="color:var(--gem-sapphire-glow)">Sapphire</span>
+          <span><strong>Characters</strong> -- the people, spren, kandra, and Cognitive Shadows. <span class="gem-legend-examples">Kaladin, Hoid, Vin, Kelsier, Shallan, Nightblood...</span></span>
+        </div>
+        <div class="gem-legend-row">
+          <span class="gem-legend-dot" style="background:var(--gem-emerald-glow)"></span>
+          <span class="gem-legend-name" style="color:var(--gem-emerald-glow)">Emerald</span>
+          <span><strong>Worlds</strong> -- the planets and realms. <span class="gem-legend-examples">Roshar, Scadrial, Sel, Nalthis, the Cognitive Realm...</span></span>
+        </div>
+        <div class="gem-legend-row">
+          <span class="gem-legend-dot" style="background:var(--gem-amethyst-glow)"></span>
+          <span class="gem-legend-name" style="color:var(--gem-amethyst-glow)">Amethyst</span>
+          <span><strong>Magic Systems</strong> -- the Invested Arts. <span class="gem-legend-examples">Allomancy, Surgebinding, Awakening, Hemalurgy, Feruchemy...</span></span>
+        </div>
+        <div class="gem-legend-row">
+          <span class="gem-legend-dot" style="background:var(--gem-heliodor-glow)"></span>
+          <span class="gem-legend-name" style="color:var(--gem-heliodor-glow)">Heliodor</span>
+          <span><strong>Shards</strong> -- the sixteen fragments of Adonalsium. <span class="gem-legend-examples">Honor, Odium, Preservation, Ruin, Endowment, Autonomy...</span></span>
+        </div>
+        <div class="gem-legend-row">
+          <span class="gem-legend-dot" style="background:var(--gem-ruby-glow)"></span>
+          <span class="gem-legend-name" style="color:var(--gem-ruby-glow)">Ruby</span>
+          <span><strong>Concepts</strong> -- the underlying mechanics and lore. <span class="gem-legend-examples">Investiture, Knights Radiant, Desolations, Connection, Identity...</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-section">
+      <h3><span class="guide-gem" style="background:var(--gem-emerald-glow)"></span>Exploring the Map</h3>
+      <ul>
+        <li><strong style="color:var(--stormlight)">Tap a gemstone</strong> to focus on it. Everything unrelated fades, and a panel opens showing its connections and how strong each one is.</li>
+        <li><strong style="color:var(--stormlight)">Tap a connection</strong> in the panel to read the actual Q&amp;A entries -- Brandon's exact words on how Nightblood relates to Vasher, or why the Cognitive Realm works differently on Sel.</li>
+        <li><strong style="color:var(--stormlight)">Search</strong> (or press <span class="guide-kbd">/</span>) to jump to any entity. Start typing "Hoid" and watch the suggestions appear.</li>
+        <li><strong style="color:var(--stormlight)">Filter</strong> by type to isolate what interests you. Turn off Characters to see only magic-system-to-world connections. Turn off everything except Shards to see how Adonalsium's fragments relate to each other.</li>
+      </ul>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-section">
+      <h3><span class="guide-gem" style="background:var(--gem-heliodor-glow)"></span>Discovering Hidden Connections</h3>
+      <p>The bar at the bottom labeled <strong style="color:var(--gem-heliodor-glow)">Embeddings</strong> is where things get interesting.</p>
+      <p>The base graph only shows <strong>explicit</strong> connections -- entity pairs that were literally tagged together in Arcanum's database. But Brandon often discusses an entity without it being formally tagged. He might answer a question tagged only "Allomancy" but spend half the answer talking about Preservation.</p>
+      <p>The embedding system reads the <em>text</em> of every Q&amp;A entry and uses AI similarity matching to find these hidden connections. Press <strong style="color:var(--gem-heliodor-glow)">Apply</strong> and new <strong>dashed amber lines</strong> appear -- connections the tags missed, but Brandon's words reveal.</p>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-section">
+      <h3><span class="guide-gem" style="background:var(--gem-amethyst-glow)"></span>Fine-Tuning the Discovery</h3>
+      <p>Press <strong style="color:var(--gem-heliodor-glow)">Tune</strong> to control how aggressively the system discovers connections:</p>
+      <table class="guide-tuning-table">
+        <thead>
+          <tr><th>Control</th><th>What It Does</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Calibration Percentile</td>
+            <td>
+              How confident do we need to be? Lower = cast a wider net. Higher = only the most obvious discoveries.
+              <span class="guide-tuning-example">At 10, a Q&amp;A about "Investiture mechanics" might get tagged with Preservation. At 50, only entries that practically name-drop Preservation would qualify.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Min Specificity</td>
+            <td>
+              Filters out hub entities that match everything loosely. Higher values only use focused entities.
+              <span class="guide-tuning-example">"Allomancy" appears in hundreds of entries and matches everything -- it gets filtered out. "Lerasium" is specific enough to produce meaningful connections.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Confidence Margin</td>
+            <td>
+              When multiple entities could match an entry, how close does a runner-up need to be to the top scorer?
+              <span class="guide-tuning-example">An entry scores 0.82 for Preservation and 0.79 for Ruin. With margin 0.05, both pass (gap is only 0.03). With margin 0.01, only Preservation is kept.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Min Edge Weight</td>
+            <td>
+              How many shared entries do two entities need before we draw a connection? Higher = fewer, stronger lines.
+              <span class="guide-tuning-example">At 2, a single coincidence isn't enough -- entities must co-occur at least twice.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>Must-Bridge</td>
+            <td>
+              Only tag entries that already mention something else. Prevents orphan discoveries floating in the void.
+              <span class="guide-tuning-example">An entry with no existing tags won't receive an implicit tag, since there's nothing for it to bridge to.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-section">
+      <h3><span class="guide-gem" style="background:var(--gem-ruby-glow)"></span>Reviewing What Was Found</h3>
+      <p>After pressing Apply, click <strong style="color:var(--gem-heliodor-glow)">Review</strong> to see every implicit tag the system discovered. You can sort by confidence score, confirm tags that look right, reject false positives, and save your reviews to a file.</p>
+      <p>Use the <strong style="color:var(--stormlight)">Explicit / Both / Implicit</strong> radio toggle to switch which edge layer is visible -- see only the original graph, only the discoveries, or both overlaid.</p>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-section" style="text-align:center;">
+      <p style="color:rgba(200,223,255,0.3); font-family:var(--font-display); font-size:13px; font-style:italic;">Data from 16,282 Words of Brandon entries on Arcanum &middot; wob.coppermind.net</p>
+    </div>
+  </div>
+</div>
+
 <!-- ── Tooltip ───────────────────────────────────────────────── -->
 <div id="tooltip"></div>
 
@@ -1220,6 +1798,76 @@ const TYPE_LABELS = {
   shard:     'Shards',
   concept:   'Concepts',
 };
+
+// ── Mobile Backdrops ────────────────────────────────────────────────────────
+
+var _panelBackdrop = null;
+var _reviewBackdrop = null;
+
+function isMobile() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function createBackdrop(closeFn) {
+  var backdrop = document.createElement('div');
+  backdrop.className = 'panel-backdrop';
+  backdrop.addEventListener('click', closeFn);
+  document.body.appendChild(backdrop);
+  return backdrop;
+}
+
+function showBackdrop(backdrop) {
+  if (backdrop && isMobile()) {
+    backdrop.classList.add('visible');
+  }
+}
+
+function hideBackdrop(backdrop) {
+  if (backdrop) {
+    backdrop.classList.remove('visible');
+  }
+}
+
+function setupBackdrops() {
+  _panelBackdrop = createBackdrop(function() { unfocus(); });
+  _reviewBackdrop = createBackdrop(function() {
+    document.getElementById('review-panel').classList.remove('open');
+    hideBackdrop(_reviewBackdrop);
+  });
+  // z-index: side panel backdrop behind panel (z20), review behind review (z25)
+  _panelBackdrop.style.zIndex = '19';
+  _reviewBackdrop.style.zIndex = '24';
+}
+
+// ── Guide Modal ─────────────────────────────────────────────────────────────
+
+function setupGuide() {
+  var overlay = document.getElementById('guide-overlay');
+  var btn = document.getElementById('guide-btn');
+  var closeBtn = document.getElementById('guide-close');
+
+  btn.addEventListener('click', function() {
+    overlay.style.display = 'flex';
+    // Force reflow so transition fires
+    overlay.offsetHeight;
+    overlay.classList.add('open');
+  });
+
+  function closeGuide() {
+    overlay.classList.remove('open');
+    setTimeout(function() {
+      overlay.style.display = 'none';
+    }, 400);
+  }
+
+  closeBtn.addEventListener('click', closeGuide);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeGuide();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeGuide();
+  });
+}
 
 // ── Stormlight Particle System ──────────────────────────────────────────────
 
@@ -1347,6 +1995,8 @@ async function init() {
   setupEmbeddingControls();
   setupEdgeLayerToggle();
   setupReviewPanel();
+  setupBackdrops();
+  setupGuide();
 
   // Ensure minimum 2.2s loading for animation
   const elapsed = Date.now() - startTime;
@@ -1488,6 +2138,30 @@ function buildGraph() {
       .style('top', (event.clientY - 10) + 'px');
   })
   .on('mouseleave', function() { tooltip.style('display', 'none'); });
+
+  // Mobile tooltip: show briefly on touch
+  nodes.on('touchstart', function(event, d) {
+    if (!isMobile()) return;
+    var touch = event.touches[0];
+    var nameEl = document.createElement('div');
+    nameEl.className = 'tt-name';
+    nameEl.style.color = GEM_GLOW[d.type];
+    nameEl.textContent = d.label;
+    var metaEl = document.createElement('div');
+    metaEl.className = 'tt-meta';
+    metaEl.textContent = GEM_NAMES[d.type] + ' \u00B7 ' + d.entryCount + ' entries';
+    var ttNode = tooltip.node();
+    ttNode.textContent = '';
+    ttNode.appendChild(nameEl);
+    ttNode.appendChild(metaEl);
+    tooltip.style('display', 'block')
+      .style('left', (touch.clientX + 14) + 'px')
+      .style('top', (touch.clientY - 10) + 'px');
+    clearTimeout(window._tooltipTimer);
+    window._tooltipTimer = setTimeout(function() {
+      tooltip.style('display', 'none');
+    }, 2000);
+  }, { passive: true });
 
   // Click to focus
   nodes.on('click', function(event, d) {
@@ -1831,6 +2505,7 @@ function showPanel(nodeId, edgeData) {
   content.appendChild(entriesSection);
 
   panel.classList.add('open');
+  showBackdrop(_panelBackdrop);
 }
 
 function showEntries(nodeId, otherNodeId, entryIds) {
@@ -2053,6 +2728,7 @@ function showAllEntries(nodeId) {
 
 function closePanel() {
   document.getElementById('panel').classList.remove('open');
+  hideBackdrop(_panelBackdrop);
 }
 
 // ── Filters ─────────────────────────────────────────────────────────────────
@@ -2503,13 +3179,16 @@ function setupReviewPanel() {
     var isOpen = panel.classList.contains('open');
     if (isOpen) {
       panel.classList.remove('open');
+      hideBackdrop(_reviewBackdrop);
     } else {
       panel.classList.add('open');
+      showBackdrop(_reviewBackdrop);
     }
   });
 
   closeBtn.addEventListener('click', function() {
     panel.classList.remove('open');
+    hideBackdrop(_reviewBackdrop);
   });
 
   saveBtn.addEventListener('click', function() {

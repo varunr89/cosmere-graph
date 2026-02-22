@@ -921,7 +921,9 @@ git commit -m "refactor: extract particles and graph modules"
 
 **Step 1: Create panel.js**
 
-Extract from lines 2204-2733: `getNeighbors()`, `focusNode()`, `unfocus()`, `setupPanel()`, `showPanel()`, `closePanel()`, and all the panel content building functions.
+Extract from lines 2204-2782: `getNeighbors()`, `focusNode()`, `unfocus()`, `setupPanel()`, `showPanel()`, `closePanel()`, and all the panel content building functions.
+
+**Important (commit 62ef1e5):** `focusNode()` now contains a local `linkFilteredOut(d)` helper that checks `activeFilters` against edge endpoint types. `unfocus()` now also restores opacity on `implicitLinks` respecting active filters. Both functions need access to `implicitLinks` from state.
 
 Imports needed:
 ```js
@@ -933,7 +935,9 @@ Export: `getNeighbors`, `focusNode`, `unfocus`, `setupPanel`, `showPanel`, `clos
 
 **Step 2: Create filters.js**
 
-Extract from lines 2734-2786: `buildFilters()`, `toggleFilter()`, `applyFilters()`.
+Extract from lines 2783-2855: `buildFilters()`, `toggleFilter()`, `applyFilters()`.
+
+**Important (commit 62ef1e5):** `applyFilters()` now contains a local `edgeVisible(d)` helper and applies opacity to both `window._links` and `implicitLinks`. The filters module needs access to `implicitLinks` from state.
 
 ```js
 import { GEM_COLORS, TYPE_LABELS } from './constants.js';

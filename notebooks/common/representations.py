@@ -54,17 +54,28 @@ def score_kmeans(model, query_embeddings):
 
 # -- GMM diagonal ------------------------------------------------------------
 
-def fit_gmm_diagonal(embeddings, max_components=5):
-    """Fit GMM with diagonal covariance, select components via BIC.
+def fit_gmm_diagonal(embeddings, max_components=5, pca_dims=100):
+    """Fit GMM with diagonal covariance on PCA-reduced embeddings,
+    select components via BIC.
 
     Args:
         embeddings: (N, D) array
         max_components: max components to try (1 to max_components)
+        pca_dims: target PCA dimensionality (avoids degenerate fits in high-D)
 
     Returns:
         dict with 'gmm': fitted GaussianMixture, 'n_components': int,
-        'method': 'gmm_diag', 'pca': None
+        'method': 'gmm_diag', 'pca': fitted PCA, 'pca_dims': int
     """
+    # GMM requires at least 2 samples; fall back to kmeans centroid for 1
+    if len(embeddings) < 2:
+        return fit_kmeans(embeddings, n_prototypes=1)
+
+    # PCA reduction to avoid degenerate covariance in high dimensions
+    actual_dims = min(pca_dims, embeddings.shape[1], embeddings.shape[0] - 1)
+    pca = PCA(n_components=actual_dims, random_state=42)
+    reduced = pca.fit_transform(embeddings)
+
     best_bic = float("inf")
     best_gmm = None
     best_k = 1
@@ -77,8 +88,8 @@ def fit_gmm_diagonal(embeddings, max_components=5):
             n_components=k, covariance_type="diag",
             n_init=1, random_state=42, max_iter=100,
         )
-        gmm.fit(embeddings)
-        bic = gmm.bic(embeddings)
+        gmm.fit(reduced)
+        bic = gmm.bic(reduced)
         if bic < best_bic:
             best_bic = bic
             best_gmm = gmm
@@ -86,7 +97,7 @@ def fit_gmm_diagonal(embeddings, max_components=5):
 
     return {
         "gmm": best_gmm, "n_components": best_k,
-        "method": "gmm_diag", "pca": None,
+        "method": "gmm_diag", "pca": pca, "pca_dims": actual_dims,
     }
 
 
@@ -102,6 +113,10 @@ def fit_gmm_full(embeddings, max_components=5, pca_dims=100):
         dict with 'gmm', 'n_components', 'method': 'gmm_full',
         'pca': fitted PCA, 'pca_dims': int
     """
+    # GMM requires at least 2 samples; fall back to kmeans centroid for 1
+    if len(embeddings) < 2:
+        return fit_kmeans(embeddings, n_prototypes=1)
+
     actual_dims = min(pca_dims, embeddings.shape[1], embeddings.shape[0] - 1)
     pca = PCA(n_components=actual_dims, random_state=42)
     reduced = pca.fit_transform(embeddings)
@@ -132,10 +147,12 @@ def fit_gmm_full(embeddings, max_components=5, pca_dims=100):
 
 
 def score_gmm(model, query_embeddings):
-    """Score query embeddings against a fitted GMM.
+    """Score query embeddings against a fitted GMM (or kmeans fallback).
 
-    Returns: (N,) array of log-likelihood scores.
+    Returns: (N,) array of log-likelihood scores (or cosine sim for kmeans fallback).
     """
+    if model.get("method") == "kmeans":
+        return score_kmeans(model, query_embeddings)
     gmm = model["gmm"]
     if model.get("pca") is not None:
         query_embeddings = model["pca"].transform(query_embeddings)

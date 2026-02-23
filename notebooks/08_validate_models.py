@@ -120,7 +120,7 @@ METHOD_USES_COSINE = {"kmeans"}
 
 FIT_FUNCTIONS = {
     "kmeans": lambda emb, **kw: fit_kmeans(emb, n_prototypes=kw.get("n_proto", 3)),
-    "gmm_diag": lambda emb, **kw: fit_gmm_diagonal(emb, max_components=kw.get("max_comp", 5)),
+    "gmm_diag": lambda emb, **kw: fit_gmm_diagonal(emb, max_components=kw.get("max_comp", 5), pca_dims=kw.get("pca_dims", 100)),
     "gmm_full": lambda emb, **kw: fit_gmm_full(emb, max_components=kw.get("max_comp", 5), pca_dims=kw.get("pca_dims", 100)),
     "kde": lambda emb, **kw: fit_kde(emb),
 }

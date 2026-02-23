@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -139,3 +140,47 @@ class TestFoldSplitting:
         assert all(c < 10 for c in entity_b_per_fold), (
             f"Some fold has all entity_b entries: {entity_b_per_fold}"
         )
+
+
+class TestIntegration:
+    """Integration tests using real embeddings (skipped if cache absent)."""
+
+    pytestmark = pytest.mark.skipif(
+        not (Path(__file__).parent.parent / "data" / "embeddings_cache" / "azure_openai.npy").exists(),
+        reason="Requires azure_openai embeddings cache",
+    )
+
+    def test_full_pipeline_one_fold(self):
+        """Run one fold of validation and check output structure."""
+        from common.validation import load_validation_data, build_stratified_folds
+        from common.embeddings import load_embeddings, normalize_embeddings
+        from common.representations import fit_kmeans, score_kmeans
+        from common.metrics import compute_tag_metrics
+
+        entry_explicit_tags, entity_tags, entry_ids, eid_to_idx = load_validation_data()
+        embeddings, _ = load_embeddings("azure_openai")
+        entries_norm = normalize_embeddings(embeddings).astype(np.float32)
+
+        folds = build_stratified_folds(entry_explicit_tags, n_folds=5, seed=42)
+        fold = folds[0]
+
+        train_eids = set(fold["train"])
+        test_eids = set(fold["test"])
+
+        # Fit one entity
+        kaladin_eids = [
+            eid for eid, tags in entry_explicit_tags.items()
+            if "kaladin" in tags and eid in train_eids and eid in eid_to_idx
+        ]
+        assert len(kaladin_eids) > 5, "Not enough Kaladin entries in training fold"
+
+        indices = [eid_to_idx[eid] for eid in kaladin_eids]
+        model = fit_kmeans(entries_norm[indices], n_prototypes=3)
+
+        # Score test entries
+        test_entry_eids = [eid for eid in test_eids if eid in eid_to_idx]
+        test_indices = [eid_to_idx[eid] for eid in test_entry_eids]
+        scores = score_kmeans(model, entries_norm[test_indices])
+
+        assert len(scores) == len(test_entry_eids)
+        assert scores.max() > 0.5, "Expected some entries to score above 0.5 for Kaladin"

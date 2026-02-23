@@ -1,0 +1,78 @@
+{
+  "azure_openai+kmeans": {
+    "model": "azure_openai",
+    "method": "kmeans",
+    "tag": {
+      "f1": 0.36022377669957295,
+      "precision": 0.32241417249390303,
+      "recall": 0.4084185330690656,
+      "map": 0.7281275901282693,
+      "threshold": 0.7
+    },
+    "edge": {
+      "edge_f1": 0.10021178206901837,
+      "edge_recall": 1.0,
+      "edge_precision": 0.052809579143145956,
+      "novel_edges": 2970.2,
+      "weight_correlation": 0.41755970877424414
+    },
+    "elapsed_s": 43.75850200653076
+  },
+  "azure_cohere+kmeans": {
+    "model": "azure_cohere",
+    "method": "kmeans",
+    "tag": {
+      "f1": 0.4007693321807144,
+      "precision": 0.5164539793471788,
+      "recall": 0.35762821536532863,
+      "map": 0.7312086609281876,
+      "threshold": 0.6900000000000001
+    },
+    "edge": {
+      "edge_f1": 0.3984225071366299,
+      "edge_recall": 1.0,
+      "edge_precision": 0.25848470495078335,
+      "novel_edges": 886.0,
+      "weight_correlation": 0.5904694398965382
+    },
+    "elapsed_s": 28.628403186798096
+  },
+  "gemini+kmeans": {
+    "model": "gemini",
+    "method": "kmeans",
+    "tag": {
+      "f1": 0.4604030292595237,
+      "precision": 0.5094818991036691,
+      "recall": 0.42016245544045344,
+      "map": 0.7773739025565206,
+      "threshold": 0.8499999999999999
+    },
+    "edge": {
+      "edge_f1": 0.30166722685797626,
+      "edge_recall": 1.0,
+      "edge_precision": 0.17843058302620457,
+      "novel_edges": 770.8,
+      "weight_correlation": 0.5301555597877476
+    },
+    "elapsed_s": 45.92185187339783
+  },
+  "voyage+kmeans": {
+    "model": "voyage",
+    "method": "kmeans",
+    "tag": {
+      "f1": 0.27605027274149363,
+      "precision": 0.23560441041178234,
+      "recall": 0.33414711328122015,
+      "map": 0.6989435971198911,
+      "threshold": 0.7
+    },
+    "edge": {
+      "edge_f1": 0.07643848572626462,
+      "edge_recall": 1.0,
+      "edge_precision": 0.03977393755604837,
+      "novel_edges": 3992.2,
+      "weight_correlation": 0.35643404066121054
+    },
+    "elapsed_s": 28.838916301727295
+  }
+}

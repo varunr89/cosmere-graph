@@ -206,8 +206,12 @@ function loadScoresAndCompute(applyBtn, statsEl) {
   }
 
   // Determine which file to fetch
+  // Use scores.json for the default model (always tracked/deployed),
+  // per-model files for non-default models
+  var isDefault = modelId === '_default' ||
+    (state.modelsManifest && modelId === state.modelsManifest.default);
   var scoreFile;
-  if (modelId === '_default') {
+  if (isDefault) {
     scoreFile = '/data/scores.json';
   } else {
     scoreFile = '/data/scores_' + modelId + '.json';

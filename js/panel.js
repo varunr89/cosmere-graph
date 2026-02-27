@@ -8,6 +8,7 @@
 import { GEM_COLORS, GEM_GLOW, GEM_HIGHLIGHT, GEM_NAMES, TYPE_LABELS } from './constants.js';
 import * as state from './state.js';
 import { isMobile, showBackdrop, hideBackdrop } from './mobile.js';
+import { getActiveModelLabel } from './embeddings.js';
 
 export function getNeighbors(nodeId) {
   var neighbors = new Set();
@@ -271,6 +272,97 @@ export function showPanel(nodeId, edgeData) {
 
   content.appendChild(connSection);
 
+  // Implicit connections section (from embedding analysis)
+  var implicitResult = window._lastImplicitResult;
+  if (implicitResult && implicitResult.edges) {
+    // Filter edges involving this node with implicit or mixed type
+    var implicitConns = {};
+    for (var ei = 0; ei < implicitResult.edges.length; ei++) {
+      var edge = implicitResult.edges[ei];
+      if (edge.type !== 'implicit' && edge.type !== 'mixed') continue;
+      var edgeSrc = typeof edge.source === 'object' ? edge.source.id : edge.source;
+      var edgeTgt = typeof edge.target === 'object' ? edge.target.id : edge.target;
+      var neighborId = null;
+      if (edgeSrc === nodeId) neighborId = edgeTgt;
+      else if (edgeTgt === nodeId) neighborId = edgeSrc;
+      if (!neighborId) continue;
+
+      var neighborNode = state.graph.nodes.find(function(n) { return n.id === neighborId; });
+      if (!neighborNode || !state.activeFilters.has(neighborNode.type)) continue;
+
+      if (!implicitConns[neighborNode.type]) implicitConns[neighborNode.type] = [];
+      implicitConns[neighborNode.type].push({
+        node: neighborNode,
+        weight: edge.weight,
+        type: edge.type,
+        entryIds: edge.entryIds
+      });
+    }
+
+    // Only render section if there are implicit connections
+    var hasImplicit = Object.keys(implicitConns).length > 0;
+    if (hasImplicit) {
+      Object.values(implicitConns).forEach(function(arr) { arr.sort(function(a, b) { return b.weight - a.weight; }); });
+
+      var implicitDivider = document.createElement('div');
+      implicitDivider.className = 'panel-divider';
+      content.appendChild(implicitDivider);
+
+      var implicitSection = document.createElement('div');
+      implicitSection.className = 'implicit-connections-section';
+      implicitSection.id = 'implicit-connections-list';
+
+      var implicitHeader = document.createElement('h3');
+      implicitHeader.className = 'implicit-section-header';
+      implicitHeader.textContent = 'Discovered by ' + getActiveModelLabel();
+      implicitSection.appendChild(implicitHeader);
+
+      var typeOrder = ['character', 'shard', 'magic', 'world', 'concept'];
+      typeOrder.forEach(function(type) {
+        var conns = implicitConns[type];
+        if (!conns || conns.length === 0) return;
+
+        var h3 = document.createElement('h3');
+        h3.style.color = GEM_GLOW[type];
+        h3.textContent = TYPE_LABELS[type] + ' (' + conns.length + ')';
+        implicitSection.appendChild(h3);
+
+        conns.forEach(function(c) {
+          var item = document.createElement('div');
+          item.className = 'connection-item implicit-connection';
+          item.dataset.node = c.node.id;
+          item.dataset.entries = JSON.stringify(c.entryIds);
+
+          var left = document.createElement('div');
+          left.className = 'conn-left';
+
+          var gem = document.createElement('span');
+          gem.className = 'conn-gem';
+          gem.style.background = GEM_COLORS[c.node.type];
+          left.appendChild(gem);
+
+          var nameSpan = document.createElement('span');
+          nameSpan.style.color = GEM_GLOW[c.node.type];
+          nameSpan.textContent = c.node.label;
+          left.appendChild(nameSpan);
+
+          var weight = document.createElement('span');
+          weight.className = 'connection-weight implicit-weight';
+          weight.textContent = c.weight;
+
+          item.appendChild(left);
+          item.appendChild(weight);
+          item.addEventListener('click', function() {
+            showEntries(nodeId, c.node.id, c.entryIds);
+          });
+          implicitSection.appendChild(item);
+        });
+      });
+
+      content.appendChild(implicitSection);
+    }
+  }
+
   // Similar Entities section
   var simData = state.similarity[nodeId];
   if (simData && simData.length > 0) {
@@ -356,6 +448,8 @@ function showEntries(nodeId, otherNodeId, entryIds) {
   backBtn.addEventListener('click', function() {
     section.style.display = 'none';
     document.getElementById('connections-list').style.display = 'block';
+    var implList = document.getElementById('implicit-connections-list');
+    if (implList) implList.style.display = 'block';
   });
   header.appendChild(backBtn);
   section.appendChild(header);
@@ -429,6 +523,8 @@ function showEntries(nodeId, otherNodeId, entryIds) {
 
   section.style.display = 'block';
   document.getElementById('connections-list').style.display = 'none';
+  var implList = document.getElementById('implicit-connections-list');
+  if (implList) implList.style.display = 'none';
 }
 
 function createLineEl(line) {
@@ -495,6 +591,8 @@ function showAllEntries(nodeId) {
   backBtn.addEventListener('click', function() {
     section.style.display = 'none';
     document.getElementById('connections-list').style.display = 'block';
+    var implList = document.getElementById('implicit-connections-list');
+    if (implList) implList.style.display = 'block';
   });
   header.appendChild(backBtn);
   section.appendChild(header);
@@ -557,6 +655,8 @@ function showAllEntries(nodeId) {
 
   section.style.display = 'block';
   document.getElementById('connections-list').style.display = 'none';
+  var implList = document.getElementById('implicit-connections-list');
+  if (implList) implList.style.display = 'none';
 }
 
 export function closePanel() {

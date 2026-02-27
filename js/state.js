@@ -21,6 +21,11 @@ export let scoresData = null;
 export let explicitTagsByEntry = {};
 export let baselineConnected = {};
 
+// Model selection
+export let activeModel = null;
+export let modelsManifest = null;
+export let scoresCache = {};
+
 // Hypothesis layer
 export let implicitLinkGroup = null;
 export let implicitLinks = null;
@@ -40,6 +45,8 @@ export function setSimilarity(val) { similarity = val; }
 export function setSimulation(val) { simulation = val; }
 export function setFocusedNode(val) { focusedNode = val; }
 export function setScoresData(val) { scoresData = val; }
+export function setActiveModel(val) { activeModel = val; }
+export function setModelsManifest(val) { modelsManifest = val; }
 export function setImplicitLinkGroup(val) { implicitLinkGroup = val; }
 export function setImplicitLinks(val) { implicitLinks = val; }
 export function set_originalTick(val) { _originalTick = val; }

@@ -37,4 +37,13 @@ async function getTagCount(page) {
   });
 }
 
-module.exports = { waitForAppReady, clickApplyAndWait, getTagCount };
+/**
+ * Select a model from the dropdown and click Apply, waiting for computation.
+ * Used by: test_model_select
+ */
+async function selectModelAndApply(page, modelId) {
+  await page.locator('#model-select').selectOption(modelId);
+  await clickApplyAndWait(page);
+}
+
+module.exports = { waitForAppReady, clickApplyAndWait, getTagCount, selectModelAndApply };

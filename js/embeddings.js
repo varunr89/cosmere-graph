@@ -27,11 +27,69 @@ export function buildBaselineConnected() {
   }
 }
 
+/**
+ * Fetch the scores manifest and populate the model selector dropdown.
+ * Falls back gracefully if no manifest exists (single-model setup).
+ */
+function loadManifest() {
+  var basePath = window.location.pathname.replace(/\/[^\/]*$/, '');
+  var selectEl = document.getElementById('model-select');
+
+  return fetch(basePath + '/data/scores_manifest.json')
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(manifest) {
+      state.setModelsManifest(manifest);
+      state.setActiveModel(manifest.default || manifest.models[0].id);
+
+      // Populate dropdown
+      selectEl.textContent = '';
+      for (var i = 0; i < manifest.models.length; i++) {
+        var m = manifest.models[i];
+        var opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.label;
+        if (m.id === state.activeModel) opt.selected = true;
+        selectEl.appendChild(opt);
+      }
+    })
+    .catch(function() {
+      // No manifest -- fall back to single model (scores.json)
+      state.setActiveModel('_default');
+      selectEl.textContent = '';
+      var opt = document.createElement('option');
+      opt.value = '_default';
+      opt.textContent = 'Default';
+      opt.selected = true;
+      selectEl.appendChild(opt);
+      selectEl.disabled = true;
+    });
+}
+
+/**
+ * Get the display label for the currently active model.
+ */
+export function getActiveModelLabel() {
+  if (state.modelsManifest && state.activeModel) {
+    for (var i = 0; i < state.modelsManifest.models.length; i++) {
+      var m = state.modelsManifest.models[i];
+      if (m.id === state.activeModel) return m.label;
+    }
+  }
+  return 'Default';
+}
+
 export function setupEmbeddingControls() {
   var tuningToggle = document.getElementById('tuning-toggle-btn');
   var tuningPanel = document.getElementById('tuning-panel');
   var applyBtn = document.getElementById('apply-embeddings-btn');
   var statsEl = document.getElementById('embedding-stats');
+  var modelSelect = document.getElementById('model-select');
+
+  // Load manifest and populate model dropdown
+  loadManifest();
 
   // Slider value labels: wire up input events
   var sliders = [
@@ -63,6 +121,24 @@ export function setupEmbeddingControls() {
     }
   });
 
+  // Model selector change
+  modelSelect.addEventListener('change', function() {
+    var newModel = modelSelect.value;
+    state.setActiveModel(newModel);
+    // Clear current scores so next Apply re-fetches/cache-looks-up
+    state.setScoresData(null);
+
+    // If embeddings were already applied, auto-recompute with new model
+    if (window._lastImplicitResult) {
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Computing...';
+      statsEl.textContent = 'Loading ' + getActiveModelLabel() + '...';
+      setTimeout(function() {
+        loadScoresAndCompute(applyBtn, statsEl);
+      }, 50);
+    }
+  });
+
   // Apply button
   applyBtn.addEventListener('click', function() {
     applyBtn.disabled = true;
@@ -78,6 +154,7 @@ export function setupEmbeddingControls() {
 
 function loadScoresAndCompute(applyBtn, statsEl) {
   var basePath = window.location.pathname.replace(/\/[^\/]*$/, '');
+  var modelId = state.activeModel || '_default';
 
   function runCompute() {
     // Read settings from sliders
@@ -92,8 +169,10 @@ function loadScoresAndCompute(applyBtn, statsEl) {
     try {
       var result = window.computeImplicitTags(state.scoresData, state.explicitTagsByEntry, state.baselineConnected, settings);
       var s = result.stats;
+      var modelLabel = getActiveModelLabel();
 
-      statsEl.textContent = s.totalTags + ' tags, ' +
+      statsEl.textContent = '[' + modelLabel + '] ' +
+        s.totalTags + ' tags, ' +
         s.entitiesConsidered + ' entities, ' +
         s.totalEdges + ' edges (' +
         s.implicitEdges + ' implicit, ' +
@@ -119,25 +198,37 @@ function loadScoresAndCompute(applyBtn, statsEl) {
     applyBtn.textContent = 'Apply';
   }
 
-  // Load scores.json if not already cached
-  if (state.scoresData) {
+  // Check in-memory cache first
+  if (state.scoresCache[modelId]) {
+    state.setScoresData(state.scoresCache[modelId]);
     runCompute();
-  } else {
-    fetch(basePath + '/data/scores.json')
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(function(data) {
-        state.setScoresData(data);
-        statsEl.textContent = 'Computing...';
-        // Another setTimeout so UI updates before heavy computation
-        setTimeout(runCompute, 50);
-      })
-      .catch(function(err) {
-        statsEl.textContent = 'Failed to load scores: ' + err.message;
-        applyBtn.disabled = false;
-        applyBtn.textContent = 'Apply';
-      });
+    return;
   }
+
+  // Determine which file to fetch
+  var scoreFile;
+  if (modelId === '_default') {
+    scoreFile = '/data/scores.json';
+  } else {
+    scoreFile = '/data/scores_' + modelId + '.json';
+  }
+
+  fetch(basePath + scoreFile)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      // Cache and set as active
+      state.scoresCache[modelId] = data;
+      state.setScoresData(data);
+      statsEl.textContent = 'Computing...';
+      // Another setTimeout so UI updates before heavy computation
+      setTimeout(runCompute, 50);
+    })
+    .catch(function(err) {
+      statsEl.textContent = 'Failed to load scores: ' + err.message;
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'Apply';
+    });
 }

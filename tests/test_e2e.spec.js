@@ -12,6 +12,15 @@ test('full embedding controls workflow with real data', async function({ page })
   await page.goto('/index.html');
   await waitForAppReady(page);
 
+  // -- Step 1b: Verify model selector populated from manifest -----------------
+  var modelSelect = page.locator('#model-select');
+  await expect(modelSelect).toBeVisible();
+  var optionCount = await modelSelect.locator('option').count();
+  expect(optionCount).toBeGreaterThanOrEqual(1);
+  // If manifest loaded, should not show "Loading models..."
+  var firstOptionText = await modelSelect.locator('option').first().textContent();
+  expect(firstOptionText).not.toBe('Loading models...');
+
   // -- Step 2: Verify baseline graph has no implicit edges --------------------
   var implicitBefore = await page.locator('line.implicit-edge').count();
   expect(implicitBefore).toBe(0);

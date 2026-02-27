@@ -242,6 +242,35 @@
   border-radius: 10px;
 }
 
+/* ── Implicit Connections ──────────────────────────────────── */
+.implicit-connections-section h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin: 18px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(200, 223, 255, 0.06);
+}
+.implicit-section-header {
+  color: var(--gem-heliodor-glow);
+  font-size: 0.7rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.6rem !important;
+  margin-top: 0 !important;
+  opacity: 0.8;
+  border-bottom: none !important;
+}
+.implicit-connection {
+  border-left: 2px dashed var(--gem-heliodor);
+  padding-left: 8px;
+}
+.implicit-weight {
+  background: rgba(196, 154, 42, 0.15);
+  color: var(--gem-heliodor-glow);
+}
+
 /* ── Entries ───────────────────────────────────────────────── */
 #entries-section {
   margin-top: 20px;
@@ -436,6 +465,11 @@
     min-height: 44px;
     display: flex;
     align-items: center;
+  }
+  #model-select {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 14px;
   }
   #tuning-toggle-btn,
   #apply-embeddings-btn {

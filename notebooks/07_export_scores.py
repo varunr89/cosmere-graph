@@ -15,17 +15,21 @@ Inputs:
 - ../../words-of-brandon/wob_entries.json -- raw WoB entries (for explicit tags)
 
 Outputs:
-- data/scores.json -- per-entity scores, calibration, and metadata
+- data/scores_{model}.json -- per-entity scores, calibration, and metadata
+- data/scores_manifest.json -- manifest listing available models (with --all)
+- data/scores.json -- backward-compat copy of the default model's output
 
 Usage:
     python 07_export_scores.py
     python 07_export_scores.py --model azure_openai --floor 0.70
+    python 07_export_scores.py --all
     python 07_export_scores.py --two-proto-min 5 --three-proto-min 10
 """
 
 import argparse
 import json
 import math
+import shutil
 import sys
 from pathlib import Path
 
@@ -33,8 +37,8 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common.paths import DATA_DIR as data_dir, WOB_PATH as wob_path
-from common.models import ALL_MODELS, EXCLUDE_TYPES
+from common.paths import DATA_DIR as data_dir, CACHE_DIR as cache_dir, WOB_PATH as wob_path
+from common.models import ALL_MODELS, EXCLUDE_TYPES, MODEL_DISPLAY_NAMES
 from common.embeddings import load_embeddings, normalize_embeddings
 
 # -- CLI ---------------------------------------------------------------------
@@ -47,6 +51,11 @@ parser.add_argument(
     choices=ALL_MODELS,
     default="azure_openai",
     help="Embedding model to use (default: azure_openai)",
+)
+parser.add_argument(
+    "--all",
+    action="store_true",
+    help="Export scores for all models with cached embeddings",
 )
 parser.add_argument(
     "--floor",
@@ -66,23 +75,16 @@ parser.add_argument(
     default=10,
     help="Minimum explicit entries for 3 prototypes (default: 10)",
 )
+parser.add_argument(
+    "--default-model",
+    default="gemini",
+    help="Default model for the manifest and backward-compat scores.json (default: gemini)",
+)
 args = parser.parse_args()
 
 MIN_ENTRIES_FOR_REF = 3
 
-# -- 1. Load cached embeddings and entry IDs ---------------------------------
-
-embeddings, entry_ids = load_embeddings(args.model)
-
-eid_to_idx = {eid: idx for idx, eid in enumerate(entry_ids)}
-total_entries = len(entry_ids)
-
-print(f"Model: {args.model}")
-print(f"Embeddings: {embeddings.shape} ({embeddings.dtype})")
-print(f"Floor: {args.floor}")
-print(f"Proto thresholds: two >= {args.two_proto_min}, three >= {args.three_proto_min}")
-
-# -- 2. Load raw WoB entries and tag classifications -------------------------
+# -- Shared data (loaded once) -----------------------------------------------
 
 with open(wob_path) as f:
     raw_entries = json.load(f)
@@ -90,13 +92,8 @@ with open(wob_path) as f:
 with open(data_dir / "tag_classifications.json") as f:
     tag_class = json.load(f)
 
-# Entity tags: everything except meta and book
 entity_tags = {t for t, info in tag_class.items() if info["type"] not in EXCLUDE_TYPES}
 
-print(f"\nTotal raw entries: {len(raw_entries)}")
-print(f"Entity tags (excl meta/book): {len(entity_tags)}")
-
-# Build explicit entity tags per entry
 entry_explicit_tags = {}
 for e in raw_entries:
     eid = e["id"]
@@ -104,166 +101,206 @@ for e in raw_entries:
     if explicit:
         entry_explicit_tags[eid] = set(explicit)
 
-print(f"Entries with explicit entity tags: {len(entry_explicit_tags)}")
 
-# -- 3. L2-normalize all entry embeddings -----------------------------------
+def export_model(model_name, floor, two_proto_min, three_proto_min):
+    """Export scores for a single model. Returns (output_dict, scores_path, entities_output)."""
+    print(f"\n{'='*60}")
+    print(f"Exporting: {model_name}")
+    print(f"{'='*60}")
 
-entries_norm = normalize_embeddings(embeddings).astype(np.float32)
+    embeddings, entry_ids = load_embeddings(model_name)
+    eid_to_idx = {eid: idx for idx, eid in enumerate(entry_ids)}
+    total_entries = len(entry_ids)
 
-# -- 4. Process each entity -------------------------------------------------
+    print(f"  Embeddings: {embeddings.shape} ({embeddings.dtype})")
+    print(f"  Floor: {floor}")
 
-entities_output = {}
-skipped = []
-proto_distribution = {1: 0, 2: 0, 3: 0}
+    # L2-normalize
+    entries_norm = normalize_embeddings(embeddings).astype(np.float32)
 
-for tag in sorted(entity_tags):
-    # Find all entries that have this tag explicitly and are in our embedding set
-    tag_eids = [
-        eid for eid, tags in entry_explicit_tags.items()
-        if tag in tags and eid in eid_to_idx
-    ]
+    # Process each entity
+    entities_output = {}
+    skipped = []
+    proto_distribution = {1: 0, 2: 0, 3: 0}
 
-    if len(tag_eids) < MIN_ENTRIES_FOR_REF:
-        skipped.append((tag, len(tag_eids)))
-        continue
+    for tag in sorted(entity_tags):
+        tag_eids = [
+            eid for eid, tags in entry_explicit_tags.items()
+            if tag in tags and eid in eid_to_idx
+        ]
 
-    n_explicit = len(tag_eids)
-    indices = [eid_to_idx[eid] for eid in tag_eids]
-    tag_embeddings = entries_norm[indices]  # already L2-normalized
+        if len(tag_eids) < MIN_ENTRIES_FOR_REF:
+            skipped.append((tag, len(tag_eids)))
+            continue
 
-    # 4a. Determine prototype count
-    if n_explicit < args.two_proto_min:
-        n_proto = 1
-    elif n_explicit < args.three_proto_min:
-        n_proto = 2
-    else:
-        n_proto = 3
+        n_explicit = len(tag_eids)
+        indices = [eid_to_idx[eid] for eid in tag_eids]
+        tag_embeddings = entries_norm[indices]
 
-    proto_distribution[n_proto] += 1
+        if n_explicit < two_proto_min:
+            n_proto = 1
+        elif n_explicit < three_proto_min:
+            n_proto = 2
+        else:
+            n_proto = 3
 
-    # 4b/4c. Compute prototype(s)
-    if n_proto == 1:
-        # Average embeddings, L2-normalize
-        proto = tag_embeddings.mean(axis=0)
-        pnorm = np.linalg.norm(proto)
-        if pnorm > 0:
-            proto = proto / pnorm
-        proto_matrix = proto.reshape(1, -1)
-    else:
-        # K-means clustering
-        kmeans = KMeans(
-            n_clusters=n_proto,
-            n_init=10,
-            random_state=42,
-        )
-        kmeans.fit(tag_embeddings)
-        centers = kmeans.cluster_centers_
+        proto_distribution[n_proto] += 1
 
-        # L2-normalize each center
-        center_norms = np.linalg.norm(centers, axis=1, keepdims=True)
-        center_norms = np.where(center_norms == 0, 1.0, center_norms)
-        proto_matrix = (centers / center_norms).astype(np.float32)
+        if n_proto == 1:
+            proto = tag_embeddings.mean(axis=0)
+            pnorm = np.linalg.norm(proto)
+            if pnorm > 0:
+                proto = proto / pnorm
+            proto_matrix = proto.reshape(1, -1)
+        else:
+            kmeans = KMeans(n_clusters=n_proto, n_init=10, random_state=42)
+            kmeans.fit(tag_embeddings)
+            centers = kmeans.cluster_centers_
+            center_norms = np.linalg.norm(centers, axis=1, keepdims=True)
+            center_norms = np.where(center_norms == 0, 1.0, center_norms)
+            proto_matrix = (centers / center_norms).astype(np.float32)
 
-    # 4d. Compute similarity: entries_norm @ proto_matrix.T -> (n_entries, n_proto)
-    sim = entries_norm @ proto_matrix.T  # (n_entries, n_proto)
+        sim = entries_norm @ proto_matrix.T
 
-    # 4e. Calibration stats: for explicitly-tagged entries
-    explicit_indices = np.array(indices)
-    explicit_sims = sim[explicit_indices]  # (n_explicit, n_proto)
-    explicit_max = explicit_sims.max(axis=1)  # max across prototypes
+        explicit_indices = np.array(indices)
+        explicit_sims = sim[explicit_indices]
+        explicit_max = explicit_sims.max(axis=1)
 
-    cal_mean = float(np.mean(explicit_max))
-    cal_std = float(np.std(explicit_max))
-    calibration = {"mean": round(cal_mean, 4), "std": round(cal_std, 4)}
-    for pct in [10, 15, 20, 25, 30, 35, 40, 45, 50]:
-        key = f"p{pct}"
-        calibration[key] = round(float(np.percentile(explicit_max, pct)), 4)
+        cal_mean = float(np.mean(explicit_max))
+        cal_std = float(np.std(explicit_max))
+        calibration = {"mean": round(cal_mean, 4), "std": round(cal_std, 4)}
+        for pct in [10, 15, 20, 25, 30, 35, 40, 45, 50]:
+            key = f"p{pct}"
+            calibration[key] = round(float(np.percentile(explicit_max, pct)), 4)
 
-    # 4f. Specificity: log(total_entries / entries_above_floor)
-    max_scores = sim.max(axis=1)  # (n_entries,)
-    above_floor_mask = max_scores > args.floor
-    entries_above_floor = int(above_floor_mask.sum())
+        max_scores = sim.max(axis=1)
+        above_floor_mask = max_scores > floor
+        entries_above_floor = int(above_floor_mask.sum())
 
-    if entries_above_floor == 0:
-        # Avoid division by zero -- very niche entity
-        specificity = float(math.log(total_entries))
-    else:
-        specificity = float(math.log(total_entries / entries_above_floor))
+        if entries_above_floor == 0:
+            specificity = float(math.log(total_entries))
+        else:
+            specificity = float(math.log(total_entries / entries_above_floor))
 
-    # 4g. Store all entries above floor
-    scores_dict = {}
-    for idx in np.where(above_floor_mask)[0]:
-        eid = entry_ids[idx]
-        score_arr = [round(float(s), 2) for s in sim[idx]]
-        scores_dict[str(eid)] = score_arr
+        scores_dict = {}
+        for idx in np.where(above_floor_mask)[0]:
+            eid = entry_ids[idx]
+            score_arr = [round(float(s), 2) for s in sim[idx]]
+            scores_dict[str(eid)] = score_arr
 
-    entities_output[tag] = {
-        "specificity": round(specificity, 4),
-        "entries_above_floor": entries_above_floor,
-        "calibration": calibration,
-        "prototypes": n_proto,
-        "scores": scores_dict,
+        entities_output[tag] = {
+            "specificity": round(specificity, 4),
+            "entries_above_floor": entries_above_floor,
+            "calibration": calibration,
+            "prototypes": n_proto,
+            "scores": scores_dict,
+        }
+
+    output = {
+        "meta": {
+            "model": model_name,
+            "floor": floor,
+            "total_entries": total_entries,
+            "proto_thresholds": {
+                "two": two_proto_min,
+                "three": three_proto_min,
+            },
+        },
+        "entities": entities_output,
     }
 
-# -- 5. Build output --------------------------------------------------------
+    # Write per-model scores file
+    scores_path = data_dir / f"scores_{model_name}.json"
+    with open(scores_path, "w") as f:
+        json.dump(output, f, separators=(",", ":"))
 
-output = {
-    "meta": {
-        "model": args.model,
-        "floor": args.floor,
-        "total_entries": total_entries,
-        "proto_thresholds": {
-            "two": args.two_proto_min,
-            "three": args.three_proto_min,
-        },
-    },
-    "entities": entities_output,
-}
+    size_mb = scores_path.stat().st_size / (1024 * 1024)
 
-# -- 6. Write scores.json ---------------------------------------------------
+    print(f"\n  Entities exported: {len(entities_output)}")
+    print(f"  Entities skipped (< {MIN_ENTRIES_FOR_REF} entries): {len(skipped)}")
+    print(f"  Prototype distribution:")
+    for n, count in sorted(proto_distribution.items()):
+        print(f"    {n} prototype(s): {count} entities")
+    print(f"  scores_{model_name}.json: {size_mb:.1f} MB")
 
-scores_path = data_dir / "scores.json"
-with open(scores_path, "w") as f:
-    json.dump(output, f, separators=(",", ":"))
+    # Sample calibration
+    for sample in ["kaladin", "hoid", "cosmere", "kelsier"]:
+        if sample in entities_output:
+            ent = entities_output[sample]
+            cal = ent["calibration"]
+            print(
+                f"    {sample}: mean={cal['mean']:.3f}, std={cal['std']:.3f}, "
+                f"p50={cal['p50']:.3f}, proto={ent['prototypes']}, "
+                f"spec={ent['specificity']:.2f}, above_floor={ent['entries_above_floor']}"
+            )
 
-# -- 7. Summary --------------------------------------------------------------
+    return output, scores_path, entities_output
 
-size_mb = scores_path.stat().st_size / (1024 * 1024)
 
-print(f"\n{'='*60}")
-print("EXPORT SUMMARY")
-print(f"{'='*60}")
-print(f"  Model: {args.model}")
-print(f"  Floor: {args.floor}")
-print(f"  Total entries: {total_entries}")
-print(f"  Proto thresholds: two >= {args.two_proto_min}, three >= {args.three_proto_min}")
-print(f"\n  Entities exported: {len(entities_output)}")
-print(f"  Entities skipped (< {MIN_ENTRIES_FOR_REF} entries): {len(skipped)}")
-print(f"\n  Prototype distribution:")
-for n, count in sorted(proto_distribution.items()):
-    print(f"    {n} prototype(s): {count} entities")
-print(f"\n  scores.json: {size_mb:.1f} MB")
+# -- Main --------------------------------------------------------------------
 
-# Sample calibration
-print(f"\n  Sample calibration:")
-for sample in ["kaladin", "hoid", "cosmere", "kelsier"]:
-    if sample in entities_output:
-        ent = entities_output[sample]
-        cal = ent["calibration"]
-        print(
-            f"    {sample}: mean={cal['mean']:.3f}, std={cal['std']:.3f}, "
-            f"p50={cal['p50']:.3f}, proto={ent['prototypes']}, "
-            f"spec={ent['specificity']:.2f}, above_floor={ent['entries_above_floor']}"
-        )
+if args.all:
+    # Find all models with cached .npy files
+    available = [m for m in ALL_MODELS if (cache_dir / f"{m}.npy").exists()]
+    if not available:
+        print("No cached embeddings found in", cache_dir)
+        sys.exit(1)
+    print(f"Found cached embeddings for: {', '.join(available)}")
+    models_to_export = available
+else:
+    models_to_export = [args.model]
 
-# Sample specificity extremes
-specs = [(name, ent["specificity"]) for name, ent in entities_output.items()]
-specs.sort(key=lambda x: x[1])
-print(f"\n  Lowest specificity (hub topics):")
-for name, spec in specs[:5]:
-    print(f"    {name}: {spec:.3f}")
-print(f"\n  Highest specificity (niche topics):")
-for name, spec in specs[-5:]:
-    print(f"    {name}: {spec:.3f}")
+results = {}
+for model in models_to_export:
+    output, scores_path, entities_output = export_model(
+        model, args.floor, args.two_proto_min, args.three_proto_min
+    )
+    results[model] = {
+        "output": output,
+        "path": scores_path,
+        "dimensions": output["meta"]["total_entries"],
+    }
 
-print()
+# -- Generate manifest (when --all) ------------------------------------------
+
+if args.all:
+    # Determine default model
+    default_model = args.default_model if args.default_model in results else list(results.keys())[0]
+
+    manifest = {
+        "models": [],
+        "default": default_model,
+    }
+    for model_id in models_to_export:
+        if model_id not in results:
+            continue
+        # Read actual embedding dimensions from the .npy shape
+        npy_path = cache_dir / f"{model_id}.npy"
+        dims = int(np.load(npy_path, mmap_mode='r').shape[1]) if npy_path.exists() else 0
+        manifest["models"].append({
+            "id": model_id,
+            "label": MODEL_DISPLAY_NAMES.get(model_id, model_id),
+            "dimensions": dims,
+            "file": f"scores_{model_id}.json",
+        })
+
+    manifest_path = data_dir / "scores_manifest.json"
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"\nManifest written: {manifest_path}")
+    print(f"  Models: {[m['id'] for m in manifest['models']]}")
+    print(f"  Default: {default_model}")
+
+    # Backward compat: copy default model's output to scores.json
+    default_scores_path = data_dir / f"scores_{default_model}.json"
+    compat_path = data_dir / "scores.json"
+    shutil.copy2(default_scores_path, compat_path)
+    print(f"  Copied {default_scores_path.name} -> scores.json (backward compat)")
+else:
+    # Single model: also write scores.json for backward compat
+    single_path = results[args.model]["path"]
+    compat_path = data_dir / "scores.json"
+    shutil.copy2(single_path, compat_path)
+    print(f"\nCopied {single_path.name} -> scores.json")
+
+print("\nDone.")

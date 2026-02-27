@@ -3,7 +3,7 @@
   position: absolute;
   bottom: 56px;
   left: 16px;
-  z-index: 10;
+  z-index: 26;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -22,6 +22,31 @@
   color: var(--gem-heliodor-glow);
   letter-spacing: 0.5px;
   white-space: nowrap;
+}
+
+#model-select {
+  background: rgba(10, 14, 24, 0.8);
+  border: 1px solid var(--crem);
+  border-radius: 6px;
+  color: var(--stormlight);
+  font-size: 12px;
+  padding: 5px 10px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: border-color 0.2s;
+  white-space: nowrap;
+}
+#model-select:hover {
+  border-color: var(--gem-heliodor);
+}
+#model-select:focus {
+  outline: none;
+  border-color: var(--gem-heliodor-glow);
+  box-shadow: 0 0 8px rgba(232, 196, 74, 0.15);
+}
+#model-select option {
+  background: #0a0e18;
+  color: var(--stormlight);
 }
 
 #tuning-toggle-btn {

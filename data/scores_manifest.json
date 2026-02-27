@@ -1,0 +1,29 @@
+{
+  "models": [
+    {
+      "id": "azure_openai",
+      "label": "Azure OpenAI",
+      "dimensions": 3072,
+      "file": "scores_azure_openai.json"
+    },
+    {
+      "id": "azure_cohere",
+      "label": "Azure Cohere",
+      "dimensions": 1024,
+      "file": "scores_azure_cohere.json"
+    },
+    {
+      "id": "gemini",
+      "label": "Gemini",
+      "dimensions": 3072,
+      "file": "scores_gemini.json"
+    },
+    {
+      "id": "voyage",
+      "label": "Voyage",
+      "dimensions": 1024,
+      "file": "scores_voyage.json"
+    }
+  ],
+  "default": "azure_openai"
+}
